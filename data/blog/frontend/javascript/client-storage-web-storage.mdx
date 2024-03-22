@@ -1,0 +1,246 @@
+---
+title: '客户端存储之 Web 存储'
+date: '2023-09-28'
+lastmod: '2023-09-28'
+tags: ['Frontend', 'TypeScript']
+draft: false
+summary: '详解客户端存储技术中的 Web 存储，介绍 localStorage 和 sessionStorage'
+---
+
+<TOCInline toc={props.toc} exclude="Introduction" />
+
+Web 存储又名本地存储，Web Storage API 提供了一种让浏览器在本地存储简单键值对的机制。
+
+Web 存储主要提供了两种类型的存储：
+
+- `sessionStorage`
+- `localStorage`
+
+本文的目标是弄清楚 Web 存储的：
+
+- 概念
+- 两种存储类型的区别
+- 使用场景
+
+## Web 存储的概念
+
+Web 存储提供了两种存储机制：
+
+- `sessionStorage` 为每一个源（`Origin`，即同源策略中的源，用于唯一表示一个页面的来源）维护了一个独立的存储区域，该存储区域在页面的会话期间是可用的（只要浏览器处于打开状态，包括页面重新加载和恢复）。
+  - 仅为一个会话（session）存储数据，这意味着数据将一直存储到浏览器（或选项卡）关闭。
+  - 数据永远不会被传输到服务器。
+  - 存储的限额要大于 cookie（最大 5MB）。
+- `localStorage` 的作用相同，但即使浏览器关闭并重新打开，`localStorage` 存储的数据也仍然存在。
+  - 存储的数据没有过期时间，只能通过 JavaScript、清除浏览器缓存或本地存储的数据的方式来清除 `localStorage`。
+  - 存储的容量限额是最大的（大于 `sessionStorage` 和 cookie）
+
+这两种机制可以通过 `window.sessionStorage` 和 `window.localStorage` 来使用，这两个属性其实都是 `Storage` 类的对象。通过 `Storage` 对象，我们可以设置、获取和删除数据。对于每个源，`sessionStorage` 和 `localStorage` 都是独立的，并且同一个源的 `sessionStorage` 和 `localStorage` 也是独立的。
+
+我们可以在浏览器控制台做如下验证：
+
+```javascript
+typeof window.localStorage
+;('object')
+
+window.localStorage === window.sessionStorage
+false
+
+window.localStorage instanceof Storage
+true
+```
+
+## Storage 提供了哪些属性和方法
+
+![浏览器 Storage 类](/static/images/web-storage-Storage-class.png)
+
+可以看到 `Storage.prototype` 上存在以下的属性和方法：
+
+- `length`：返回存储在 `Storage` 对象中的数据项的数量
+- `key()`：接收一个数值 `n` 作为参数，并返回存储中的第 `n` 个键名
+- `getItem()`：接收一个 `key` 作为参数，返回对应的 `value`
+- `setItem()`：接收一个 `key` 名和 `value` 作为参数，将 `key/value` 添加到存储中，如果 `key` 存在，则更新其对应的 `value`
+- `removeItem()`：接收一个 `key` 作为参数，并把该 `key/value` 对从存储中删除
+- `clear()`：清空存储中的所有数据
+
+由于 `localStorage` 和 `sessionStorage` 都是 `Storage` 的对象，因此 `localStorage` 和 `sessionStorage` 自然可以使用这些属性和方法。
+
+## 测试 Web 存储是否可用
+
+为了能够使用 `localStorage`，我们首先需要测试在当前的会话中是否支持 Web 存储并且其是否可用。
+
+支持 `localStorage` 的浏览器会在 `window` 对象上拥有一个 `localStorage` 的属性。但是，仅验证该属性是否存在可能会引发异常。`localStorage` 虽然存在，但不能保证 `localStorage` 是可用的，这是因为各种浏览器都提供了禁用 `localStorage` 的设置。因此，浏览器可能支持 `localStorage`，但不适用于页面上的脚本。
+
+例如，在私有浏览模式下的 Safari 浏览器为我们提供了一个空的 `localStorage` 对象，其容量大小为零，这就相当于禁用了 `localStorage` 了。
+
+在可以正常使用 `localStorage` 的情况下也可能会收到 `QuotaExceededError`，但这完全是合法且正常的，这表示已经用完了所有可用的存储空间，但实际上 `localStorage` 是可用。所以我们在进行可用性检查时应该充分考虑这些情况，而不能仅通过一种情况来判断 Web 存储是否可用。
+
+这是一个检测 `localStorage` 是否同时受支持和可用的函数（来自 MDN）：
+
+```js
+function storageAvailable(type) {
+  var storage
+  try {
+    storage = window[type]
+    var x = '__storage_test__'
+    storage.setItem(x, x)
+    storage.removeItem(x)
+    return true
+  } catch (e) {
+    return (
+      e instanceof DOMException &&
+      // everything except Firefox
+      (e.code === 22 ||
+        // Firefox
+        e.code === 1014 ||
+        // test name field too, because code might not be present
+        // everything except Firefox
+        e.name === 'QuotaExceededError' ||
+        // Firefox
+        e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+      // acknowledge QuotaExceededError only if there's something already stored
+      storage &&
+      storage.length !== 0
+    )
+  }
+}
+```
+
+使用：
+
+```js
+if (storageAvailable('localStorage')) {
+  // Yippee! We can use localStorage awesomeness
+} else {
+  // Too bad, no localStorage for us
+}
+```
+
+可以通过调用 `storageAvailable('sessionStorage')` 来测试 `sessionStorage`。
+
+## Web 存储的使用
+
+`Storage` 对象是只能存储简单的键值对，类似于对象，例如存储键 `name` 和值 `Ray`。它不支持复杂数据（比如数组或对象），但你可以把这样的值先编码成 JSON，然后再存储。
+
+键和值始终是字符串（与对象一样，整数键将自动转换为字符串）。你可以像访问对象一样访问这些值，或者使用 `Storage.getItem()` 和 `Storage.setItem()` 方法。这三行的作用是相同的：
+
+```js
+localStorage.colorSetting = '#a4509b'
+localStorage['colorSetting'] = '#a4509b'
+localStorage.setItem('colorSetting', '#a4509b')
+```
+
+但是强烈推荐使用 `Storage.getItem()` 和 `Storage.setItem()` 这些方法来操作 `localStorage` 和 `sessionStorage`。
+
+### 示例一：使用 Web 存储记录访问页面的次数
+
+```HTML
+<body>
+  <p id="result"></p>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (storageAvailable('localStorage')) { // 检测函数来自上一小节
+        let numHits = localStorage.getItem('numHits');
+        numHits = !numHits ? 0 : parseInt(numHits, 10);
+        numHits++;
+        localStorage.setItem('numHits', numHits);
+        document.getElementById('result').innerText = `你已经访问该网站${numHits}次啦！`
+      }
+    });
+  </script>
+</body>
+```
+
+### 示例二：使用 Web 存储保存表单数据
+
+```HTML
+<body>
+<form id="user">
+  <label for="name">Your Name:</label>
+  <input type="text" id="name" name="name" /> <br />
+
+  <label for="age">Your Age:</label>
+  <input type="number" id="age" name="age" /> <br />
+
+  <label for="email">Your Email</label>
+  <input type="email" id="email" name="email" /> <br />
+
+  <input type="submit" />
+</form>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+	if (storageAvailable('localStorage')) {
+	  // 获取元素
+	  const name = document.querySelector('#name');
+	  const age = document.querySelector('#age');
+	  const email = document.querySelector('#email');
+	  const user = document.querySelector('#user');
+
+	  // 如果有数据，则获取并预设
+	  const person = localStorage.getItem('person');
+	  if (person) {
+		const p = JSON.parse(person);
+		name.value = p.name;
+		age.value = p.age;
+		email.value = p.email;
+		console.log('🚀 从 localStorage 中恢复了表单数据！');
+	  }
+
+	  // 监听所有 Input 控件的 input 事件
+	  const inputs = document.querySelectorAll('input');
+	  for (let input of inputs) {
+		input.addEventListener('input', () => {
+		  const p = {
+			name: name.value,
+			age: age.value,
+			email: email.value,
+		  };
+		  localStorage.setItem('person', JSON.stringify(p));
+		  console.log('将表单数据存入 localStorage');
+		});
+	  }
+	}
+
+	user.addEventListener('submit', () => {
+	  localStorage.removeItem('person');
+	});
+  });
+</script>
+</body>
+```
+
+以上代码就是实现了当用户不小心关闭了浏览器或 tab 页面时，在下次用户重新打开页面时浏览器能快速的从 `localStorage` 中将数据读取出来并预设表单控件的值。
+
+## `storage` 事件
+
+`storage` 事件是 `window` 上的事件，当存储区域（如 `localStorage`）在另一个文档的上下文被修改时，就会触发这个事件。
+
+注意：在同一个页面上进行修改是不会触发这个事件的，它是一种让同一个域上的其他页面使用存储去同步更改的一种方式。其它域的页面是不能访问相同的存储对象的。
+
+示例：
+
+```js
+// http://127.0.0.1:5500/a.html
+localStorage.setItem('Tom', 'Good')
+
+window.addEventListener('storage', () => {
+  console.log('storage event fired 🚀🚀')
+  console.log(localStorage.getItem('Tom'))
+})
+
+// http://127.0.0.1:5500/b.html
+setTimeout(() => {
+  localStorage.setItem('Tom', 'Bad')
+}, 3000)
+```
+
+如上例所示，我们在 `http://127.0.0.1:5500` 这个域下打开 `a.html`，然后再在这个域下打开 `b.html` 后，3 秒后，在 `a.html` 的 console 中我们可以看到 `storage` 事件被触发了，而且 `Tom` 对应的值被更改为了 `Bad`。所以当同一个域中的另一个页面更改了 `localStorage` 中的某个数据时，该页面就可以接收到 `storage` 事件并做出相应的处理。
+
+## 总结
+
+本文中我们介绍了客户端存储中的 Web 存储，Web 存储的两种存储机制 `localStorage` 和 `sessionStorage` 的主要作用是为浏览器提供在本地存储简单键值对数据的机制。同时我们还对两种存储机制的生命周期、存储容量做了区分，以及分析了 `Storage` 接口和 `storage` 事件。
+
+## 延伸阅读
+
+- [Web Storage API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API)
