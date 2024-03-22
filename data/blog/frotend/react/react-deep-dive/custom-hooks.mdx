@@ -1,0 +1,234 @@
+---
+title: 深入浅出自定义 Hook
+date: 2023-11-06
+lastmod: 2023-11-06
+tags: ['React', 'Frontend']
+draft: false
+summary: 自定义 Hook 的创建方式以及有趣的实例
+---
+
+## 自定义 Hook 介绍
+
+在 React 中可以重用 UI 或代码逻辑，自定义 Hook 就是用来进行代码逻辑重用的一种方式。
+
+<div className="scale-75 transform overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react-custome-hooks-chosen-flow.png)
+</div>
+
+我们通过组件来重用一个 UI 片段。如果想在 React 中重用逻辑，我们首先要提出的一个问题是，我想要重用的代码逻辑中是否包含任何 React Hook？如果没有，那么我们只需要一个普通的函数，该函数可以存在于组件的内部活外部。
+
+如果想要重用的代码逻辑包含 React Hook，那么我们不能简单的将逻辑提取到一个普通的函数中。此时我们需要创建一个自定义 Hook，自定义 Hook 允许我们在组件之间重用有状态的逻辑，实际上不仅是有状态的逻辑，而是包含一个到多个 React Hook 的逻辑。
+
+所以更准确的说，自定义 Hook 允许我们重用非 UI 逻辑。就像普通函数或组件一样，一个 Hook 应该只有一个目的，即单一职责，它只应该做一件特定、明确的事情。所以我们不能简单的将一个组件的所有 React Hook 放入到一个自定义 Hook 中。自定义 Hook 必须保持功能单一，职责明确，这样可以方便进行重用和移植，这样的自定义组件甚至可以在不同的项目中使用。在 React 的生态中，开发人员会分享他们自己编写的自定义 Hook，这些开源的自定义 Hook 可以从 NPM 上下载并使用。
+
+由于自定义 Hook 是由 React Hook 组成的，所以任何 React Hook 的规则同样适用于自定义 Hook。
+
+下图是一个自定义 Hook 的示例：
+
+<div className="overflow-hidden">
+  ![react-custom-hooks-rules](/static/images/react-custom-hooks-rules.png)
+</div>
+
+一个自定义 Hook 其实只是一个 JS 函数，所以它可以接收和返回与这个自定义 Hook 相关的任何数据，自定义 Hook 通常会返回数组或对象。自定义 Hook 和组件不同，组件也是普通的 JS 函数，但组件只能接收 props，并且始终必须返回一些 JSX。
+
+普通函数和自定义 Hook 之间的区别在于自定义 Hook 需要使用一个或多个 React Hook。因此这个自定义 Hook 使用了两 个 useState 和一个 useEffect Hook，将一个简单的获取功能抽象成这个自定义 Hook 。
+
+最后，为了让 React 认识到这个函数实际上是是一个 Hook，函数名必须以 use 开头，就像所有内置的 React Hook 一样。
+
+现在让我们来做一个小结：
+
+- 自定义 Hook 允许我们在多个组件中重用非视觉（non-visual）逻辑
+- 一个自定义组件应该职责单一（只有一个目的），让其可重用和可移植（甚至跨多个项目）
+- React Hooks 的规则同样适用于自定义 Hook
+
+---
+
+## useMovies 自定义 Hook
+
+```js:hooks/useMovies.js
+import { useState, useEffect } from 'react'
+
+const KEY = 'f84fc31d'
+
+export function useMovies(query) {
+  const [movies, setMovies] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(
+    function () {
+      const controller = new AbortController()
+
+      async function fetchMovies() {
+        try {
+          setIsLoading(true)
+          setError('')
+
+          const res = await fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=${query}`, {
+            signal: controller.signal,
+          })
+
+          if (!res.ok) throw new Error('Something went wrong with fetching movies')
+
+          const data = await res.json()
+          if (data.Response === 'False') throw new Error('Movie not found')
+
+          setMovies(data.Search)
+          setError('')
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.log(err.message)
+            setError(err.message)
+          }
+        } finally {
+          setIsLoading(false)
+        }
+      }
+
+      if (query.length < 3) {
+        setMovies([])
+        setError('')
+        return
+      }
+
+      fetchMovies()
+
+      return function () {
+        controller.abort()
+      }
+    },
+    [query]
+  )
+
+  return { movies, isLoading, error }
+}
+```
+
+---
+
+## useLocalStorageState 自定义 Hook
+
+```javascript
+import { useState, useEffect } from 'react'
+
+export function useLocalStorageState(initialState, key) {
+  const [value, setValue] = useState(function () {
+    const storedValue = localStorage.getItem(key)
+    return storedValue ? JSON.parse(storedValue) : initialState
+  })
+
+  useEffect(
+    function () {
+      localStorage.setItem(key, JSON.stringify(value))
+    },
+    [value, key]
+  )
+
+  return [value, setValue]
+}
+```
+
+---
+
+## useKey 自定义 Hook
+
+```javascript
+import { useEffect } from 'react'
+
+export function useKey(key, action) {
+  useEffect(
+    function () {
+      function callback(e) {
+        if (e.code.toLowerCase() === key.toLowerCase()) {
+          action()
+        }
+      }
+
+      document.addEventListener('keydown', callback)
+
+      return function () {
+        document.removeEventListener('keydown', callback)
+      }
+    },
+    [action, key]
+  )
+}
+```
+
+---
+
+## useGeolocate 自定义 Hook
+
+```javascript
+import { useState } from 'react'
+
+function useGeolocation() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [position, setPosition] = useState({})
+  const [error, setError] = useState(null)
+
+  function getPostion() {
+    if (!navigator.geolocation) {
+      return setError('Your browser does not support geolocation')
+    }
+
+    setIsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPosition({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        })
+        setIsLoading(false)
+      },
+      (error) => {
+        setError(error.message)
+        setIsLoading(false)
+      }
+    )
+  }
+
+  return { isLoading, position, error, getPostion }
+}
+
+export default function App() {
+  const {
+    isLoading,
+    position: { lat, lng },
+    error,
+    getPostion,
+  } = useGeolocation()
+
+  const [countClicks, setCountClicks] = useState(0)
+
+  function handleClick() {
+    setCountClicks((count) => count + 1)
+    getPostion()
+  }
+
+  return (
+    <div>
+      <button onClick={handleClick} disabled={isLoading}>
+        Get my position
+      </button>
+
+      {isLoading && <p>Loading position...</p>}
+      {error && <p>{error}</p>}
+      {!isLoading && !error && lat && lng && (
+        <p>
+          Your GPS position:{' '}
+          <a
+            target="_blank"
+            rel="noreferrer"
+            href={`https://www.openstreetmap.org/#map=16/${lat}/${lng}`}
+          >
+            {lat}, {lng}
+          </a>
+        </p>
+      )}
+
+      <p>You requested position {countClicks} times</p>
+    </div>
+  )
+}
+```

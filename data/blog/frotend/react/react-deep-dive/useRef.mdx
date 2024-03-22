@@ -1,0 +1,71 @@
+---
+title: '深入浅出 useRef'
+date: '2023-11-05'
+lastmod: '2023-11-05'
+tags: ['React', 'Frontend']
+draft: false
+summary: 'useRef 的用法、应用场景、和 useState 的区别'
+---
+
+本文中我将介绍 `useRef` 的用法、应用场景、和 `useState` 的区别。并针对具体的应用场景分别给出示例。
+
+## 在 React 中如何选择 DOM 元素？
+
+首先我们先来看
+
+## useRef 介绍
+
+`useRef` 是 React 中的一个 Hook，用来创建一个引用——ref，ref 内部包含一个「盒子」，在多次渲染之间需要进行保存的数据可以放到这个「盒子」中。`useRef` 会返回一个对象，该对象包含一个 `current` 属性，`curernt` 属性就相当于是保存数据的「盒子」，`curernt` 是可修改的 (mutable)，因此可以向其读写数据。
+
+<div className="overflow-hidden">![useRef example](/static/images/useRef.png)</div>
+
+在上图中，`current` 属性首先被设置为初始值 `23`，表示在 `myRef` 中保存了 `23`，然后我们将其更改为 `1000`。
+
+React 中 Props 和 State 是不可变的，但 `.current` 是可变的。
+
+Refs 真正特殊之处是其在多次渲染之间是持久化的，因此它们的 `current` 属性可以在多次渲染之间进行保持，就像 State 一样。
+
+由此 Refs 的两个主要用途是：
+
+- 使用 Refs 来保存在渲染之间保持不变的值。比如保存上一次的 State 或存储 `setTimeout` 函数的 ID
+- 选择和存储 DOM 元素
+
+就像 `setTimeout` 的 ID 一样，DOM 元素也是我们想要在多次渲染之间存储和保持的数据。
+
+Refs 通常用于保存不在组件的 UI 中进行渲染的数据。因此 Refs 通常只在事件处理器或 `useEffect` 中使用，而不在 JSX 中使用。当然，我们也可以在 JSX 中使用 Refs，但这不是使用它们的地方。如果你需要保存参与组件 UI 渲染的数据，那通常需要的是 State 而不是 Refs。
+
+和 State 一样，我们不能在渲染逻辑中写入或读取 `current` 属性，因为这将产生不好的副作用。所以通常会在 `useEffect` 内执行这些修改。
+
+## State 和 Refs
+
+在对 `useRef` 进行基本的介绍后，我相信你已经理解了 Refs 是什么，以及知道了它的两个主要的用途。此时，你也许会产生一个疑问——State 和 Refs 区别和联系是什么？这节我们就来解答这个问题。
+
+下图是 State 和 Refs 的对比：
+
+<div className="overflow-hidden">![State vs. props](/static/images/state-vs-refs.png)</div>
+
+在某种程度上，Refs 可以说是权利更小的 State。二者的共同点是它们都在渲染之间被 React 记住（保持）。组件即使重新渲染后也会记住这些值。二者最大的区别在于更新 State 会导致组件重新渲染，但更新 Refs 不会导致组件重新渲染。
+
+结论：
+
+- 更新后需要重新渲染组件的数据——使用 State
+- 需要组件记住，但更新后不需要重新渲染组件的数据——使用 Refs
+
+例如 `setTimeout` 的 ID，这是我们希望 React 在渲染之间要记住的数据，但我们不希望这个数据在更新时重新渲染 UI，所以我们会使用 Refs 来处理这种类型的数据。
+
+State 和 Refs 的次要区别是 State 是不可变的，但 Refs 是可变的；State 是异步更新的，不能在更新后立即使用新 State，Refs 是同步更新的，在更新后可以立即读取新的 `current` 属性。
+
+下面是一张流程图，展示了如何选择合适的方法来保存组件中数据。
+
+<div className="overflow-hidden">
+  ![react-chosen-store-data-process](/static/images/react-chosen-store-data-process.png)
+</div>
+
+## 使用 Refs 选择 DOM 元素
+
+## 使用 Refs 在渲染之间保持数据
+
+## 延伸阅读
+
+- [Manipulating the DOM with Refs](https://react.dev/learn/manipulating-the-dom-with-refs#accessing-another-components-dom-nodes)
+- [useRef Reference](https://react.dev/reference/react/useRef)

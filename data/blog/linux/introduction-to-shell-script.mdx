@@ -1,0 +1,1160 @@
+---
+title: 'Shell 脚本编程入门'
+date: '2021-09-01'
+lastmod: '2024-03-22'
+tags: ['Linux']
+draft: false
+summary: 'Linux Shell 脚本编程基础教程'
+---
+
+如果你想管理好你的主机，Shell 脚本是一个很好的工具。它类似于早期的批处理文件，但功能更强大，可以编写类似程序的指令，无需编译即可执行。在 Linux 环境中，许多服务的启动都是通过 Shell 脚本完成的。学习 Shell 脚本可以简化日常工作管理，并且在解决问题时也会更加得心应手。
+
+shell script 是利用 shell 的功能所写的一个程序 ，这个程序是使用纯文本文件，将一些 shell 的语法与指令（含外部指令）写在里面， 搭配正则表达式、管道命令与数据流重定向等功能，以达到想要的处理目的。
+
+---
+
+<TOCInline toc={props.toc} exclude="Introduction" />
+
+## 1. 基础入门
+
+- 指令的执行是从上而下、从左而右的分析与执行
+- 指令的下达：指令、选项与参数间的多个空白都会被忽略掉
+- 空白行也将被忽略掉，并且 [tab] 按键所推开的空白同样视为空白键
+- 如果读取到一个 Enter 符号（CR） ，就尝试开始执行该行（或该串） 命令
+- 如果一行的内容太多，则可以使用 `\[Enter]` 来延伸至下一行
+- `#` 为注释符号，任何加在 `#` 后面的数据将全部被视为注释而被忽略
+
+如何执行 Shell 脚本：
+
+- 直接指令下达：`shell.sh` 文件必须要具备可读与可执行（rx） 的权限，然后
+  - 绝对路径：使用 `/home/mecury/shell.sh` 来下达指令
+  - 相对路径：假设工作目录在 `/home/mecury`，则使用 `./shell.sh` 来执行
+  - 变量 `PATH`：将 `shell.sh` 放在 `PATH` 指定的目录内
+- 以 bash 程序来执行：通过 `bash shell.sh` 或 `sh shell.sh` 来执行
+
+```bash
+#!/bin/bash
+# Program:
+#       This program shows "Hello World!" in your screen.
+# History:
+# 2021/11/7   Mecury  First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+echo -e "Hello World! \a \n"
+exit 0
+```
+
+1. 第一行 `#!/bin/bash` 声明这个 script 使用的 shell
+2. 程序内容的说明：内容与功能、版本信息、作者与联络方式、创建日期、历史记录
+3. 主要环境变量的声明
+4. 主要程序部分
+5. 执行结果（定义返回值）：`$?` 这个可以用来查看一个指令执行的结果，可以利用 `exit` 指令来中断程序，并且回传一个数字给系统
+
+在每个 script 文件的开始处需要记录好：功能、版本信息、作者与联系方式、版权声明方式、历史记录、特殊指令使用『绝对路径』的方式下达、脚本运行时需要的环境变量预先声明与设置。
+
+---
+
+## 2. Shell 脚本练习
+
+### 简单示例
+
+**交互式脚本**：变量的值由脚本的使用者决定（使用 `read` 指令读取输入）
+
+`showname.sh`
+
+```bash
+#!/bin/bash
+#!/bin/bash
+# Program:
+#    User inputs his first name and last name.  Program shows his full name.
+# History:
+# 2021/07/16    Quartzeast    First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+read -p "Please input your first name:" firstname      # 提示使用者输入
+read -p "Please input your last name:" lastname       # 提示使用者输入
+echo -e "\nYour full name is: ${firstname} ${lastname}" # 结果由屏幕输出
+```
+
+**随日期变化结果的脚本**：利用 `date` 进行文件的创建
+
+当每天备份数据库时，可以通过在文件名中包含日期来实现每天一个不同的文件名，以避免旧数据被覆盖。例如，使用类似于 `backup.2015-07-16.data` 的命名方式，其中日期部分根据实际日期动态生成。这样可以确保每天都有不同的文件名，而无需手动修改脚本。
+
+`create_3_filename.sh`
+
+```bash
+#!/bin/bash
+# Program:
+#	Program creates three files, which named by user's input and date command.
+# History:
+# 2021/07/16	Quartzeast	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+# 1\. 让使用者输入文件名称，并取得 fileuser 这个变量；
+echo -e "I will use'touch'command to create 3 files." # 纯粹显示信息
+read -p "Please input your filename:" fileuser         # 提示使用者输入
+
+# 2. 为了避免用户随意按 Enter，利用 :- 来给 filename 提供一个默认值
+# 如果 fileuser 没有设置，则使用 "filename" 作为默认值
+filename=${fileuser:-"filename"}
+
+# 3. 利用 data 指令来设置所需要的变量名
+date1=$(date --date='2 days ago' +%Y%m%d) # $(command) 获取指令运行的结果
+date2=$(date --date='1 days ago' +%Y%m%d)
+date3=$(date +%Y%m%d)
+file1=${filename}${date1} # 变量的叠加
+file2=${filename}${date2}
+file3=${filename}${date3}
+
+touch "${file1}"
+touch "${file2}"
+touch "${file3}"
+```
+
+**整数数值运算**： 利用 `declare` 或 `$((expression) )` 实现整数的运算
+
+在 Bash 中，可以使用 `declare` 命令定义变量类型，变量定义成为整数后才能够进行算术运算。此外，还可以通过使用 `$((expression))` 实现数值的运算，Bash 中仅支持整数的运算。
+
+```bash
+#!/bin/bash
+# Program:
+#	User inputs 2 integer numbers; program will cross these two numbers.
+# History:
+# 2021/07/16	Quartzeast	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+echo -e "You SHOULD input 2 numbers, I will multiplying them! \n"
+read -p "first number:" firstnum
+read -p "second number:" secnum
+
+total=$((${firstnum}*${secnum})) # 可以使用 $((expression)) 来进行数值计算
+echo -e "\nThe result of ${firstnum} x ${secnum} is ==> ${total}"
+```
+
+数值的运算，可以使用 `declare -i total=${firstnu}*${secnu}`，也可以使用上面的方式来进行，比较建议使用下面的方式来进行运算：
+
+```bash
+var=$((expression))
+```
+
+这种方式可以在两个小括号内加上空格，增强可读性，如 `echo $（（ 13 % 3 ））`。数值的运算支持 `+, - , *, /, %`。
+
+**小数数值运算**：通过 `bc` 计算 `pi`
+
+如果想要计算含有小数点的数据时，其实可以通过 `bc` 指令实现，如 `echo"123.123*55.9"| bc`。
+
+计算 π 时，小数点以后的位数可以无限延伸。使用 `bc` 的计算 π 需要通过 `bc -l` 来调用。可以编写一个脚本，让用户输入小数位数，以提高 π 的准确度。
+
+```bash
+#!/bin/bash
+# Program:
+#	User inputs 2 integer numbers; program will cross these two numbers.
+# History:
+# 2021/07/16	Quartzeast	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+echo -e "This program will calculate pi value. \n"
+echo -e "You should input a float number to calculate pi value.\n"
+read -p "The scale number （10~10000） ?" checking
+
+num=${checking:-"10"}           # 判断有否有输入数值
+echo -e "Starting calcuate pi value.  Be patient."
+time echo "scale=${num}; 4*a (1)" | bc -lq
+```
+
+上述数据中，`4*a (1)` 是由 bc 提供的计算 pi 的函数，`scale` 表示 `bc` 计算 pi 的小数位数，scale 值越大，计算精度越高但耗时也越长，建议不要超过 5000 以免长时间计算。
+
+### script 的执行方式差异（`source, sh script, ./script`）
+
+不同的 script 执行方式会造成不一样的结果，且会影响 bash 的环境。
+
+1. 利用直接执行的方式来执行脚本，、bash 或 sh、该脚本都会使用一个新的 bash 环境来执行脚本内的指令。
+
+   当直接使用指令执行脚本（绝对 / 相对路径、`$PATH`）或者通过 bash/sh 来执行脚本时，脚本将在一个新的 bash 环境中运行，即在子进程的环境中执行。在子进程完成后，其内部的变量或动作将不会传回到父进程中。
+
+   ```plain text
+   $ echo ${firstname} ${lastname} # 不存在这两个变量
+
+   $ sh showname.sh # 执行脚本
+   Please input your first name: q
+   Please input your last name: z
+
+   Your full name is: q z
+
+   # 还是不存在这两个变量，showname.sh 执行完毕后，子进程 bash 内的所有数据便被移除了
+   $ echo ${firstname} ${lastname}
+   ```
+
+   在使用直接执行方法处理 `showname.sh` 脚本时，由于系统会在新的 bash 环境中执行，设置 `firstname`、`lastname` 是在子进程中进行的，执行完毕后子进程内的数据被移除，因此在父进程下无法看到这些变量的值。
+
+2. 利用 `source` 来执行脚本：在父进程中执行
+
+   ```
+   $ echo ${firstname} ${lastname}
+
+   $ source showname.sh
+   Please input your first name: q
+   Please input your last name: z
+
+   Your full name is: q z
+
+   $ echo ${firstname} ${lastname}
+   q z
+   ```
+
+   `source` 对脚本的执行方式可用下图来说明，`showname.sh` 会在父进程中执行，因此各项动作都会在原本的 bash 中生效。这就是为什么不登出系统而要让某些写入 `~/.bashrc` 的设置生效时，需要使用 `source ~/.bashrc` 而不能使用 `bash ~/.bashrc`。
+
+---
+
+## 3. 判断表达式
+
+### `test` 命令
+
+当要检测系统上某些文件是否存在或某个文件的相关的属性时，可利用 `test` 指令进行判断：
+
+```bash
+# 检测 /foo 是否存在
+$ test -e /foo
+
+$ test -e /foo && echo "exist" || echo "Not exist"
+```
+
+`-e` 可以测试一个东西是否存在。以下是 `test` 还可以进行的其它测试。
+
+```
+1. 关于某个文件的『文件类型』判断
+-e		该文件是否存在
+-f		该文件是否存在且为文件（file）
+-d		该文件是否存在且为目录（directory）
+-b		该文件是否存在且为一个 block device
+-c		该文件是否存在且为一个 character device
+-S		该文件是否存在且为一个 Socket 文件
+-p 		该文件是否存在且为一个 FIFO (pipe) 文件
+-L		该文件是否存在且为一个链接文件
+
+2. 关于文件的权限的检查
+-r		检查该文件是否存在且具有『可读』的权限
+-w		检查该文件是否存在且具有『可写』的权限
+-x		检查该文件是否存在且具有『可执行』的权限
+-u		检查该文件是否存在且具有 "SUID" 的属性
+-g		检查该文件是否存在且具有 "SGID" 的属性
+-k		检查该文件是否存在且具有 "Sticky bit" 的属性
+-s		检查该文件是否存在且具为『非空白文件』
+
+3. 两个个文件之间的比较
+-nt		(newer than) 判断 file1 是否比 file2 新
+-ot		(older than) 判断 file1 是否比 file2 旧
+-ef		判断 file1 和 file2 是否为同一文件，可用在判断 hard link 的判定上。
+        主要意义在判定两个文件是否指向同一个 inode
+
+4. 关于两个整数之间的判断
+-eq		两数值相等（equal）
+-ne		两数值不等（not equal）
+-gt		> (greater than)
+-lt		<(less than)
+-ge		>= (greater than or equal)
+-le		<= (less than or equal)
+
+5. 字符串的判断
+test -z string		判断 string 是否为空，如果为空则为 true
+test -n string		判断 string 是否不为空，如果 string 为空，则为 false，-n 可省略
+test str1 == str2   判断 str1 是否等于 str2，若相等，则返回 true
+test str1 != str2   判断 str1 是否不等于 str2，若相等，则返回 false
+
+6. 多重条件判断：
+-a		(and) 两条件同时成立，test -r filename -a -x filename，
+        当 file 具有 r 与 x 权限时才返回 true
+-o		(or) 两条件任何一个成立
+!		(not) 取反，test ! -x file 当 file 不具有 x 权限时，返回 true
+```
+
+示例：
+
+```bash
+#!/bin/bash
+# Program:
+#    User input a filename, program will check the flowing:
+#    1.） exist? 2.） file/directory? 3.） file permissions
+# History:
+# 2015/07/16    QZE    First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+# 1. 让使用者输入文件名，并判断是否真的有输入字符串
+echo -e "Please input a filename, I will check the filename's type and permission. \n\n"
+read -p "Input a filename:" filename
+test -z ${filename} && echo "You MUST input a filename." && exit 0
+
+# 2. 判断文件是否存在，若不存在输出信息并结束脚本
+test ! -e ${filename} && echo "The filename '${filename}' DO NOT exist" && exit 0
+
+# 3. 判断文件类型和属性
+test -f ${filename} && filetype="regulare file"
+test -d ${filename} && filetype="directory"
+test -r ${filename} && perm="readable"
+test -w ${filename} && perm="${perm} writable"
+test -x ${filename} && perm="${perm} executable"
+
+# 4. 输出信息
+echo "The filename: ${filename} is a ${filetype}"
+echo "And the permissions for you are : ${perm}"
+```
+
+### 判断符号 `[]`
+
+除了 `test` 之外还可以使用 `[]` 来进行判断
+
+```bash
+# 判断 ${HOME} 变量是否为空
+[ -z "${HOME}" ]; echo $?
+```
+
+使用 `[]` 需要特别注意，因为 `[]` 可用在通配符和正则表达式，所以在 bash 的语法中使用中括号进行判断时，必须要注意中括号的两端需要由空白字符来分隔。`[ "$HOME" == "$MAMIL" ]`，在 bash 中使用一个等号与两个等号的结果是一样的，不过在一般编程语言中，一个等号表示赋值，两个等号表示逻辑判断。由于在中括号内重点在于判断而非变量赋值，因此最好使用两个等号。
+
+```bash
+[ "$HOME" == "$MAIL" ] # 等价于 test "${HOME}" == "${MAIL}"
+```
+
+- 在中括号 `[]` 内的每个元素都需要用空白键来分隔
+- 在中括号的变量，最好都用双引号括起来
+- 在中括号内的常量，最好用单或双引号括起来
+
+中括号的使用方法与 `test` 几乎一样，常用在 `if...then...fi` 中。
+
+```bash
+#!/bin/bash
+# Program:
+#	This program shows the user's choice
+# History:
+# 2021/11/7   QZE  First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+read -p "Please input (Y/N):" yn
+[ "${yn}" == "Y" -o "${yn}" == "y" ] && echo "OK, continue" && exit 0
+[ "${yn}" == "N" -o "${yn}" == "n" ] && echo "Oh, interrupt!" && exit 0
+echo "I don't know what your choice is" && exit 0
+```
+
+### 脚本默认变量 `$0, $1...`
+
+指令可以带有选项和参数，如 `ls -al` 可以查看所有文件（包含隐藏文件）的属性和权限。那么 shell 脚本能否在执行时在脚本文件名后带上参数呢？
+
+```bash
+# 如果想重新启动系统的网络，可以这么做
+$ file /etc/init.d/network
+/etc/init.d/network: Bourne-Again shell script, ASCII text executable
+# 使用 file 查询后，系统告知这个文件是可 bash 可执行的脚本
+$ /etc/init.d/network restart
+```
+
+`restart` 表示重新启动 `/etc/init.d/network`，在 `/etc/init.d/network` 后面加上 `stop` 就可以直接关闭该服务。如果要根据程序的执行给定一些变量去进行不同的任务时，可以使用 `read`，但是 `read` 需要手动在标准输入中输入一些值。直接在脚本启动命令后面接参数的方式会更加方便一些。
+
+Shell 脚本对于参数设置了一些默认的变量名称。
+
+```
+/path/to/scriptname  opt1  opt2  opt3  opt4
+       $0             $1    $2    $3    $4
+# 执行脚本文件为 $0，第一个参数为 $1
+
+$#: 代表参数个数
+$@: 代表 "$1" "$2" "$3" "$4" 之意，每个变量是独立的
+$*: 代表 "$1c$2c$3c$4" c 为分隔字符，默认为空白符
+
+注意区分 $@ 和 $*
+```
+
+```bash
+#!/bin/bash
+# Program:
+#    Program shows the script name, parameters...
+# History:
+# 2015/07/16    QZE    First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+echo "The script name is        ==> ${0}"
+echo "Total parameter number is ==> $#"
+[ "$#" -lt 2 ] && echo "The number of parameter is less than 2.  Stop here." && exit 0
+echo "Your whole parameter is   ==> '$@'"
+echo "The 1st parameter         ==> ${1}"
+echo "The 2nd parameter         ==> ${2}"
+```
+
+`shift`: 参数变量索引偏移
+
+```bash
+#!/bin/bash
+# Program:
+#	Program shows the effect of shift function.
+# History:
+# 2009/02/17	QZ	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+echo "Total parameter number is     ==> $#"
+echo "Your whole parameter is       ==>'$@'"
+shift # 进行第一次『一个变量的 shift』
+echo "Total parameter number is     ==> $#"
+echo "Your whole parameter is       ==>'$@'"
+shift 3
+echo "Total parameter number is     ==> $#"
+echo "Your whole parameter is       ==>'$@'"
+```
+
+`shift` 会移动变量，而且 `shift` 后可接数字，代表拿掉最前面的几个参数。
+
+---
+
+## 4. 条件判断
+
+### 使用 `if...then`
+
+1. 简单条件判断表达式
+
+```bash
+if [ 条件判断式 ]; then
+
+fi
+```
+
+如果有多个条件，除了将多个条件写入一个中括号之外，还可将多个中括号隔开，括号与括号之间，则以 `&&` 或 `||` 来隔开。
+
+- `&&` 表示 `AND`
+- `||` 表示 `OR`
+
+```bash
+[ "${yn}" == "Y" -o "${yn}" == "y" ]
+# 可以替换为
+[ "${yn}" == "Y" ] || [ "${yn}" == "y" ]
+# 习惯上一个中括号内只有一个判断式
+```
+
+```bash
+#!/bin/bash
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+read -p "Please input (Y/N):" yn
+
+if [ "${yn}" == "Y" ] || [ "${yn}" == "y" ]; then
+    echo "OK, continue"
+    exit 0
+fi
+
+if [ "${yn}" == "N" ] || [ "${yn}" == "n" ]; then
+    echo "Oh, interrupt!"
+    exit 0
+fi
+echo "I don't know what your choice is" && exit 0
+```
+
+### 多重条件判断式
+
+```bash
+# 一个条件判断，分成功进行与失败进行（else）
+if [ 条件判断式 ]; then
+
+else
+
+fi
+```
+
+```bash
+# 多个条件判断（if...elif...elif...else）分多种不同情况执行
+if [ 条件判断式 1 ]; then
+
+elif [ 条件判断式 2 ]; then
+
+else
+
+fi
+```
+
+```bash
+#!/bin/bash
+# Program:
+#       This program shows the user's choice
+# History:
+# 2015/07/16    QZE   First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+read -p "Please input (Y/N): " yn
+
+if [ "${yn}" == "Y" ] || [ "${yn}" == "y" ]; then
+	echo "OK, continue"
+elif [ "${yn}" == "N" ] || [ "${yn}" == "n" ]; then
+	echo "Oh, interrupt!"
+else
+	echo "I don't know what your choice is"
+fi
+```
+
+```bash
+#!/bin/bash
+# Program:
+#	Check $1 is equal to "hello"
+# History:
+# 2015/07/16	QZE	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+if [ "${1}" == "hello" ]; then
+	echo "Hello, how are you ?"
+elif [ "${1}" == "" ]; then
+	echo "You MUST input parameters, ex> {${0} someword}"
+else
+	echo "The only parameter is 'hello', ex> {${0} hello}"
+fi
+```
+
+`netstat` 指令，可以查询主机当前打开的网络服务端口（service ports），可以利用 `netstat -tuln` 来取得目前主机有启动的服务。
+
+```
+[root@mercury01 workspace]# netstat -tuln
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State
+tcp        0      0 127.0.0.1:46089         0.0.0.0:*               LISTEN
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+tcp6       0      0 127.0.0.1:8005          :::*                    LISTEN
+tcp6       0      0 :::8009                 :::*                    LISTEN
+tcp6       0      0 :::80                   :::*                    LISTEN
+tcp6       0      0 :::8080                 :::*                    LISTEN
+tcp6       0      0 :::22                   :::*                    LISTEN
+udp        0      0 127.0.0.1:323           0.0.0.0:*
+udp6       0      0 ::1:323                 :::*
+包格式				  本地 IP: 端口			   远程 IP: 端口			是否监听
+```
+
+`Local Address` 代表的是本地主机所启动的网络服务。IP 的部分说明该服务位于的接口，若为 `127.0.0.1` 则是仅针对本机开放，若是 `0.0.0.0` 或 `:::` 则代表对整个互联网开放。每个端口都有其特定的网络服务，几个常见的 port 与相关网络服务的关系是：
+
+```
+80: www
+22: ssh
+21: ftp
+25: mail
+111: RPC（远程程序调用）
+631: CUPS
+```
+
+```bash
+#!/bin/bash
+# Program:
+# Using netstat and grep to detect WWW,SSH,FTP and Mail services.
+# History:
+# 2015/07/16 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+echo "Now, I will detect your Linux server's services!"
+echo -e "The www, ftp, ssh, and mail(smtp) will be detected! \n"
+
+testfile=/dev/shm/netstat_checking.txt
+netstat -tuln > ${testfile}
+testing=$(grep ":80 " ${testfile})
+if [ "${testing}" != "" ]; then
+	echo "WWW is running in your system."
+fi
+testing=$(grep ":22 " ${testfile})
+if [ "${testing}" != "" ]; then
+	echo "SSH is running in your system."
+fi
+testing=$(grep ":21 " ${testfile})
+if [ "${testing}" != "" ]; then
+	echo "FTP is running in your system."
+fi
+testing=$(grep ":25 " ${testfile})
+if [ "${testing}" != "" ]; then
+	echo "Mail is running in your system."
+fi
+```
+
+```bash
+#!/bin/bash
+# Program:
+# You input your demobilization date, I calculate how many days before you demobilize.
+# History:
+# 2015/07/16 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+echo "This program will try to calculate :"
+echo "How many days before your demobilization date..."
+read -p "Please input your demobilization date (YYYYMMDD ex>20150716): " date2
+
+date_d=$(echo ${date2} |grep '[0-9]\{8\}')
+if [ "${date_d}" == "" ]; then
+	echo "You input the wrong date format...."
+	exit 1
+fi
+
+declare -i date_dem=$(date --date="${date2}" +%s)       # 退伍日期秒数
+declare -i date_now=$(date +%s)                         # 现在日期秒数
+declare -i date_total_s=$((${date_dem}-${date_now}))    # 剩余秒数统计
+declare -i date_d=$((${date_total_s}/60/60/24))         # 转为日数
+if [ "${date_total_s}" -lt "0" ]; then                  # 判断是否已退伍
+	echo "You had been demobilization before: " $((-1*${date_d})) " ago"
+else
+	declare -i date_h=$(($((${date_total_s}-${date_d}*60*60*24))/60/60))
+	echo "You will demobilize after ${date_d} days and ${date_h} hours."
+fi
+```
+
+### 利用 `case...esac` 判断
+
+```bash
+case $varname in # 关键字为 case, 变量前需要加 $
+		"第一个变量的内容") # 每个变量内容建议使用双引号括起来
+      	程序段
+      	;; # 每个类别结尾需要使用两个连续的分号
+		"第二个变量的内容")
+      	程序段
+      	;;
+  	*) # 最后一个变量内容都会用 * 来代表所有其他值，表示 default
+  			程序段
+      	exit 1
+      	;;
+esac
+```
+
+```bash
+#!/bin/bash
+# Program:
+# Show "Hello" from $1.... by using case .... esac
+# History:
+# 2015/07/16 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+case ${1} in
+  "hello")
+	echo "Hello, how are you ?"
+	;;
+  "")
+	echo "You MUST input parameters, ex> {${0} someword}"
+	;;
+  *)    # 其实就相当于万用字元，0~无穷多个任意字元之意！
+	echo "Usage ${0} {hello}"
+	;;
+esac
+```
+
+虽然 CentOS 7 已经使用 systemd，不过仍有数个服务是放在 `/etc/init.d/` 目录下。
+
+```bash
+/etc/init.d/netconsole restart
+```
+
+`case $var in` 中的 `$var` 有两种取得方式：
+
+- 直接指定：`script.sh variable`，直接赋值给 `$1`
+- 交互式：通过 `read` 指令让使用者输入变量的内容
+
+```bash
+#!/bin/bash
+# Program:
+# This script only accepts the flowing parameter: one, two or three.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+echo "This program will print your selection !"
+# read -p "Input your choice: " choice    # 暂时取消，可以替换！
+# case ${choice} in                       # 暂时取消，可以替换！
+case ${1} in                              # 现在使用，可以用上面两行替换！
+  "one")
+	echo "Your choice is ONE"
+	;;
+  "two")
+	echo "Your choice is TWO"
+	;;
+  "three")
+	echo "Your choice is THREE"
+	;;
+  *)
+	echo "Usage ${0} {one|two|three}"
+	;;
+esac
+```
+
+---
+
+## 5. 函数
+
+函数（function）是一种在 shell 脚本中用来简化程序代码的工具，类似于自定义执行指令，能够帮助简化重复的代码。
+
+```bash
+# 函数可以在 Shell 脚本中创造一个类似自定义指令的东西
+function fname () {
+	...
+}
+```
+
+因为 shell script 的执行方式是由上而下，由左而右，因此在 shell script 当中的函数一定要写在程序的最前面。这样才能被后面的代码使用。
+
+```bash
+#!/bin/bash
+# Program:
+# Use function to repeat information.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+function printit(){
+	echo -n "Your choice is "
+}
+
+echo "This program will print your selection !"
+case ${1} in
+  "one")
+	printit; echo ${1} | tr 'a-z' 'A-Z'
+	;;
+  "two")
+	printit; echo ${1} | tr 'a-z' 'A-Z'
+	;;
+  "three")
+	printit; echo ${1} | tr 'a-z' 'A-Z'
+	;;
+  *)
+	echo "Usage ${0} {one|two|three}"
+	;;
+esac
+```
+
+函数同样拥有内置变量，与 shell script 类似，函数名称表示为 `$0` ，而后续接的变量以 `$1, $2...` 来表示。注意函数的 `$0, $1...` 是和脚本的 `$0, $1...` 无关的。
+
+```bash
+#!/bin/bash
+# Program:
+# Use function to repeat information.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+function printit(){
+function printit(){
+	echo "Your choice is ${1}"
+}
+
+echo "This program will print your selection !"
+case ${1} in
+  "one")
+	printit 1
+	;;
+  "two")
+	printit 2
+	;;
+  "three")
+	printit 3
+	;;
+  *)
+	echo "Usage ${0} {one|two|three}"
+	;;
+esac
+```
+
+---
+
+## 6. 循环
+
+循环可以不断的执行某个程序段，直到条件达成为止。
+
+### 不定循环 `while, until`
+
+```bash
+# 当 condition 条件成立时，就进行循环，直到 condition 的条件不成立时才停止
+while [ condition ] # 中括号内的状态就是判断式
+do # do 是循环的开始
+		程序段落
+done # done 是循环的结束
+```
+
+```bash
+# 当 condition 条件成立时，就终止循环，否则就持续进行循环
+until [ condition ]
+do
+		程序段落
+done
+```
+
+示例 1：让使用者输入 `yes` 或者是 `YES` 才结束程序的执行
+
+```bash
+#!/bin/bash
+# Program:
+# Repeat question until user input correct answer.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+while [ "${yn}" != "yes" -a "${yn}" != "YES" ]
+do
+	read -p "Please input yes/YES to stop this program: " yn
+done
+echo "OK! you input the correct answer."
+```
+
+示例 2：使用 `until` 实现示例 1
+
+```bash
+#!/bin/bash
+# Program:
+# Repeat question until user input correct answer.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+until [ "${yn}" == "yes" -o "${yn}" == "YES" ]
+do
+	read -p "Please input yes/YES to stop this program: " yn
+done
+echo "OK! you input the correct answer."
+```
+
+示例 3：计算 1+2+3+....+100
+
+```bash
+#!/bin/bash
+# Program:
+# Use loop to calculate "1+2+3+...+100" result.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+s=0   # 这是加总的数值变数
+i=0   # 这是累计的数值，亦即是1, 2, 3....
+while [ "${i}" != "100" ]
+do
+	i=$(($i+1))    # 每次i 都会增加1
+	s=$(($s+$i))   # 每次都会加总一次！
+done
+echo "The result of '1+2+3+...+100' is ==> $s"
+```
+
+### 固定循环 `for...do...done`
+
+相对于 `while`, `until` 的循环方式是必须要『符合某个条件』，`for` 这种语法，则是『已经知道要进行几次循环』。
+
+```bash
+for var in con1 con2 con3 ...
+do
+		程序段
+done
+
+# $var 的变量内容在循环时
+# 1 $var -> con1
+# 2 $var -> con2
+# ...
+```
+
+示例 1：输出动物
+
+```bash
+#!/bin/bash
+# Program:
+# Using for .... loop to print 3 animals
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+for animal in dog cat elephant
+do
+	echo "There are ${animal}s.... "
+done
+```
+
+示例 2：该程序通过 `cut` 从 `/etc/passwd` 中提取帐户名称，并在循环中使用 `id` 检查每个用户的信息
+
+```bash
+#!/bin/bash
+# Program
+# Use id, finger command to check system account's information.
+# History
+# 2022/07/17 QZE first release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+users=$(cut -d ':' -f1 /etc/passwd)
+for username in ${users}
+do
+  id ${username}
+done
+```
+
+示例 3：使用 `ping` 循环来监测网络状态
+
+```bash
+#!/bin/bash
+# Program
+# Use ping command to check the network's PC state.
+# History
+# 2022/07/17 QZE first release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+network="192.168.1"
+for sitenu in $(seq 1 100); do
+  ping -c 1 -w 1 ${network}.${sitenu} &> /dev/null && result=0 || result=1
+  if [ "${result}" == 0 ]; then
+    echo "Server ${network}.${sitenu} is UP."
+  else
+    echo "Server ${network}.${sitenu} is DOWN."
+  fi
+done
+```
+
+除了使用 `$(seq 1 100)` 之外，也可以直接使用 bash 的内置机制来处理，可以使用 `{1..100}` 来代替 `$(seq 1 100)`。如 `echo {a..g}` 表示连续输出 `a, b, c...g` 的意思。
+
+示例 4：让使用者输入某个目录文件名， 然后我找出某目录内的文件名的权限
+
+```bash
+#!/bin/bash
+# Program:
+# User input dir name, I find the permission of files.
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+# 1. 先看看这个目录是否存在啊？
+read -p "Please input a directory: " dir
+if [ "${dir}" == "" -o ! -d "${dir}" ]; then
+	echo "The ${dir} is NOT exist in your system."
+	exit 1
+fi
+
+# 2. 开始测试档案啰～
+filelist=$(ls ${dir})         # 列出所有在该目录下的档案名称
+for filename in ${filelist}
+do
+	perm=""
+	test -r "${dir}/${filename}" && perm="${perm} readable"
+	test -w "${dir}/${filename}" && perm="${perm} writable"
+	test -x "${dir}/${filename}" && perm="${perm} executable"
+	echo "The file ${dir}/${filename}'s permission is ${perm} "
+done
+```
+
+`for...do...done` 的数值处理：
+
+```bash
+# for 循环的另外一种写法，主要用于数值方式的运算中，在不上的设置上
+# 如果每次增加 1，则可使用 i++ 的方式
+for ((初始值; 条件; 步长))
+do
+
+done
+```
+
+```bash
+#!/bin/bash
+# Program:
+# Try do calculate 1+2+....+${your_input}
+# History:
+# 2022/07/17 QZE First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+read -p "Please input a number, I will count for 1+2+...+your_input: " nu
+
+s=0
+for (( i=1; i<=${nu}; i=i+1 ))
+do
+	s=$((${s}+${i}))
+done
+echo "The result of '1+2+3+...+${nu}' is ==> ${s}"
+```
+
+**使用数组和随机数**
+
+```bash
+#!/bin/bash
+# Program:
+# 	Try do tell you what you may eat.
+# History:
+# 2022/07/17	QZE	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+eat[1]="賣噹噹漢堡"       # 寫下你所收集到的店家！
+eat[2]="肯爺爺炸雞"
+eat[3]="彩虹日式便當"
+eat[4]="越油越好吃大雅"
+eat[5]="想不出吃啥學餐"
+eat[6]="太師父便當"
+eat[7]="池上便當"
+eat[8]="懷念火車便當"
+eat[9]="一起吃泡麵"
+eatnum=9                  # 需要輸入有幾個可用的餐廳數！
+
+check=$(( ${RANDOM} * ${eatnum} / 32767 + 1 ))
+echo "your may eat ${eat[${check}]}"
+```
+
+```bash
+#!/bin/bash
+# Program:
+# 	Try do tell you what you may eat.
+# History:
+# 2022/07/17	QZE	First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+eat[1]="賣噹噹漢堡"
+eat[2]="肯爺爺炸雞"
+eat[3]="彩虹日式便當"
+eat[4]="越油越好吃大雅"
+eat[5]="想不出吃啥學餐"
+eat[6]="太師父便當"
+eat[7]="池上便當"
+eat[8]="懷念火車便當"
+eat[9]="一起吃泡麵"
+eatnum=9
+
+eated=0
+while [ "${eated}" -lt 3 ]; do
+        check=$(( ${RANDOM} * ${eatnum} / 32767 + 1 ))
+        mycheck=0
+        if [ "${eated}" -ge 1 ]; then
+                for i in $(seq 1 ${eated} )
+                do
+                        if [ ${eatedcon[$i]} == $check ]; then
+                                mycheck=1
+                        fi
+                done
+        fi
+        if [ ${mycheck} == 0 ]; then
+                echo "your may eat ${eat[${check}]}"
+                eated=$(( ${eated} + 1 ))
+                eatedcon[${eated}]=${check}
+        fi
+done
+```
+
+---
+
+## 7. 追踪与 Debug
+
+```bash
+$ sh [-nvx] script.sh
+选项与参数：
+-n: 不执行脚本，仅检查语法问题
+-v: 在执行脚本前，先将脚本的内容输出的屏幕上
+-x: 将使用到的脚本内容显示到屏幕上
+```
+
+```
+$ sh -x demo.sh
+[root@mercury01 workspace]# sh -x demo.sh
++ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/root/bin
++ export PATH
++ eat [1]= 卖当当汉堡包
++ eat [2]= 肯爷爷炸鸡
++ eat [3]= 彩虹日式🍱
++ eat [4]= 越油越好吃大雅
++ eat [5]= 太师傅🍱
++ eat [6]= 想不出吃啥学餐
++ eat [7]= 池上🍱
++ eat [8]= 怀恋火车🍱
++ eat [9]= 一起吃🍜
++ eatnum=9
+...
+```
+
+在加号后面的数据其实都是指令串，由于 `sh -x` 的方式来将指令执行过程显示出来，如此使用者可以判断程序执行到哪一段时会出现相关的信息。
+
+---
+
+### 示例
+
+```bash
+#!/bin/bash
+# Try do tell you what you may eat
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+eat [1]="卖当当汉堡包"
+eat [2]="肯爷爷炸鸡"
+eat [3]="彩虹日式🍱"
+eat [4]="越油越好吃大雅"
+eat [5]="太师傅🍱"
+eat [6]="想不出吃啥学餐"
+eat [7]="池上🍱"
+eat [8]="怀恋火车🍱"
+eat [9]="一起吃🍜"
+eatnum=9
+
+check=$((${RANDOM}*${eatnum} / 32767 + 1))
+echo "your may eat ${eat [${check}]}"
+```
+
+```bash
+#!/bin/bash
+# Program:
+#   Try do tell you what you may eat
+# History:
+# 2021/11/7   Mecury  First release
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+eat [1]="卖当当汉堡包"
+eat [2]="肯爷爷炸鸡"
+eat [3]="彩虹日式🍱"
+eat [4]="越油越好吃大雅"
+eat [5]="太师傅🍱"
+eat [6]="想不出吃啥学餐"
+eat [7]="池上🍱"
+eat [8]="怀恋火车🍱"
+eat [9]="一起吃🍜"
+eatnum=9
+
+eated=0
+while ["${eated}" -lt 3 ]; do
+    check=$((${RANDOM}*${eatnum}/32767+1))
+    mycheck=0
+    if ["${eated}" -ge 1 ]; then
+        for i in $(seq 1 ${eated} )
+        do
+            if [${eatedcon [$i]} == $check ]; then
+                mycheck=1
+            fi
+        done
+    fi
+    if [${mycheck} == 0 ]; then
+        echo "your may eat ${eat [${check}]}"
+        eated=$((${eated}+1))
+        eatedcon [${eated}]=${check}
+    fi
+done
+```
+
+```bash
+#!/bin/bash
+echo -e "Your name is ==> $(whoami)"
+echo -e "Your current directory is ==> $(pwd)"
+```
+
+## 8. 重点回顾
+
+- shell script 是利用 shell 的功能所写的一个程序，将一些 shell 的语法与指令（含外部指令）写在里面，搭配正则表达式、管道与数据流重定向等功能，以达到想要实现的目的
+- 在 Shell script 的文件中，指令的执行是从上而下、从左而右的分析与执行
+- shell script 的执行，至少需要有 `r` 的权限，若需要直接指令下达，则需要拥有 `r` 与 `x` 的权限
+- 交互式脚本可以使用 `read` 指令实现
+- 要创建每次执行脚本都有不同结果的数据，可使用 `date` 指令利用日期实现
+- 如果以 `source` 来执行脚本，代表在父进程的 `bash` 中执行
+- 如果需要判断，可使用 `test` 或 `[]` 来处理
+- 在脚本内，`$0, $1, $2...$@` 是有特殊含义的
+- 条件判断可使用 `if...then` 来判断，若是固定变量内容的情况下，可使用 `case $var in...esac` 来处理
+- 循环主要分为不定循环 `while, until` 以及固定循环 `for`，配合 `do, done` 完成循环
+- 可以使用 `sh -x script.sh` 来进行程序的 debug

@@ -1,0 +1,1849 @@
+---
+title: 网道 TypeScript 教程量子速读版
+date: 2024-3-22
+lastmod: 2024-3-22
+tags: ['TypeScript', 'Frontend']
+draft: false
+summary: 阮一峰老师的 TypeScript 教程精简速度版，用于快速查阅
+---
+
+教程地址：[TypeScript 教程](https://wangdoc.com/typescript/)
+
+<TOCInline toc={props.toc} exclude="Introduction" />
+
+## 1. TypeScript 语言简介
+
+### 概述
+
+TypeScript 是微软开发的一种基于 JavaScript 的编程语言，旨在增强 JavaScript 的功能，使其更适合多人合作的企业级项目。它是 JavaScript 的超集，继承了 JavaScript 的全部语法，并添加了一个独立的类型系统。
+
+### 类型的概念
+
+类型（type）指的是一组具有相同特征的值。如果两个值具有某种共同的特征，就可以说，它们属于同一种类型。
+
+一旦确定某个值的类型，就意味着，这个值具有该类型的所有特征，可以进行该类型的所有运算。凡是适用该类型的地方，都可以使用这个值；凡是不适用该类型的地方，使用这个值都会报错。
+
+** 类型是人为添加的一种编程约束和用法提示。** 主要目的是在软件开发过程中，为编译器和开发工具提供更多的验证和帮助，帮助提高代码质量，减少错误。
+
+```typescript
+// 参数 n 的类型为 number，表示这个位置只能使用数值，传入其他类型的值就会报错
+function addOne(n: number) {
+  return n + 1
+}
+```
+
+### 动态类型与静态类型
+
+JavaScript 的类型系统是动态的，不具有很强的约束性。
+
+TypeScript 引入了一个更强大、更严格的类型系统，属于静态类型语言。
+
+## 2. 基本用法
+
+### 类型声明
+
+```typescript
+let foo: string // 类型声明的语法 冒号 + 类型
+```
+
+```typescript
+function toString(num: number): string {
+  return String(num)
+}
+```
+
+注意，变量的值应该与声明的类型一致，如果不一致，TypeScript 就会报错。
+
+```typescript
+// 报错
+let foo: string = 123
+```
+
+另外，TypeScript 规定，变量只有赋值后才能使用，否则就会报错。
+
+```typescript
+let x: number
+console.log(x) // 报错
+```
+
+### 类型推断
+
+类型声明并不是必需的，如果没有，TypeScript 会自己推断类型。
+
+```typescript
+let foo = 123
+```
+
+如果变量 `foo` 更改为其他类型的值，跟推断的类型不一致，TypeScript 就会报错。
+
+```typescript
+let foo = 123
+foo = 'hello' // 报错
+```
+
+TypeScript 也可以推断函数的返回值。
+
+```typescript
+function toString(num: number) {
+  return String(num)
+}
+```
+
+### TypeScript 的编译
+
+JavaScript 的运行环境（浏览器和 Node.js）无法直接运行 TypeScript 代码，必须先编译成 JavaScript。TypeScript 提供编译器但不提供运行环境。编译过程会删除类型声明和相关代码，只保留可运行的 JavaScript 代码，并不改变运行结果。因此，TypeScript 的类型检查仅在编译时进行，运行时不再检查类型。
+
+### 值与类型
+
+学习 TypeScript 需要分清楚「值」（value）和「类型」（type）。
+
+「类型」是针对「值」的，可以视为是后者的一个元属性。每一个值在 TypeScript 里面都是有类型的。比如，`3` 是一个值，它的类型是 `number`。
+
+TypeScript 代码只涉及类型，不涉及值。所有跟「值」相关的处理，都由 JavaScript 完成。
+
+### tsc 编译器
+
+TypeScript 官方提供的编译器叫做 tsc，可以将 TypeScript 脚本编译成 JavaScript 脚本。
+
+#### 安装
+
+```
+$ npm install -g typescript
+```
+
+#### 编译脚本
+
+`tsc` 命令后面，加上 TypeScript 脚本文件，就可以将其编译成 JavaScript 脚本。
+
+```
+$ tsc app.ts
+```
+
+`tsc` 命令一次编译多个 TypeScript 脚本：
+
+```
+$ tsc file1.ts file2.ts file3.ts
+```
+
+`--outFile`：将多个 TypeScript 脚本编译成一个 JavaScript 文件
+
+```
+$ tsc file1.ts file2.ts --outFile app.js
+```
+
+`--outDir`：指定保存到其他目录
+
+```
+$ tsc app.ts --outDir dist
+```
+
+`--target`：指定编译后的 JavaScript 版本。
+
+```
+$ tsc --target es2015 app.ts
+```
+
+#### 编译错误的处理
+
+编译成功时，`tsc` 命令不会有任何显示；如果出现报错，`tsc` 命令将显示错误信息，但仍会生成 JavaScript 脚本。
+
+```typescript
+// app.ts
+let foo: number = 123
+foo = 'abc' // 报错
+```
+
+```
+$ tsc app.ts
+
+app.ts:2:1 - error TS2322: Type 'string' is not assignable to type 'number'.
+
+2 foo = 'abc';
+  ~~~
+
+Found 1 error in app.ts:2
+```
+
+编译产物 `app.js` 还是会照样生成，下面就是编译后的结果
+
+```javascript
+// app.js
+var foo = 123
+foo = 'abc'
+```
+
+如果希望一旦报错就停止编译，不生成编译产物，可以使用 `--noEmitOnError` 参数。
+
+```
+$ tsc --noEmitOnError app.ts
+```
+
+tsc 还有一个 `--noEmit` 参数，只检查类型是否正确，不生成 JavaScript 文件。
+
+```
+$ tsc --noEmit app.ts
+```
+
+#### `tsconfig.json`
+
+TypeScript 允许将 `tsc` 的编译参数，写在配置文件 `tsconfig.json`。只要当前目录有这个文件，`tsc` 就会自动读取，所以运行时可以不写参数。
+
+```
+$ tsc file1.ts file2.ts --outFile dist/app.js
+```
+
+上面这个命令写成 `tsconfig.json`，就是下面这样。
+
+```
+{
+  "files": ["file1.ts", "file2.ts"],
+  "compilerOptions": {
+    "outFile": "dist/app.js"
+  }
+}
+```
+
+有了这个配置文件，编译时直接调用 `tsc` 命令就可以了。
+
+```
+$ tsc
+```
+
+#### `ts-node`
+
+[`ts-node`](https://github.com/TypeStrong/ts-node) 是一个非官方的 npm 模块，可以直接运行 TypeScript 代码。
+
+```
+$ npm install -g ts-node
+$ ts-node script.ts
+```
+
+如果不安装 `ts-node`，也可以通过 npx 调用它来运行 TypeScript 脚本。
+
+```
+$ npx ts-node script.ts
+```
+
+如果执行 `ts-node` 命令不带有任何参数，它会提供一个 TypeScript 的命令行 REPL 运行环境，你可以在这个环境中输入 TypeScript 代码，逐行执行。
+
+```
+$ ts-node
+>
+```
+
+### `any` 类型，`unknown` 类型，`never` 类型
+
+### `any` 类型
+
+#### 基本含义
+
+`any` 类型表示没有任何限制，该类型的变量可以赋予任意类型的值。
+
+```typescript
+let x: any
+
+x = 1 // 正确
+x = 'foo' // 正确
+x = true // 正确
+```
+
+变量类型一旦设为 `any`，TypeScript 实际上会关闭这个变量的类型检查。即使有明显的类型错误，只要句法正确，都不会报错。
+
+```typescript
+let x: any = 'hello'
+
+x(1) // 不报错
+x.foo = 100 // 不报错
+```
+
+上面示例中，变量 `x` 的值是一个字符串，但是把它当作函数调用，或者当作对象读取任意属性，TypeScript 编译时都不报错。原因就是 `x` 的类型是 `any`，TypeScript 不对其进行类型检查。
+
+由于这个原因，应该尽量避免使用 `any` 类型，否则就失去了使用 TypeScript 的意义。
+
+实际开发中，`any` 类型主要适用以下两个场合。
+
+1. 出于特殊原因，需要关闭某些变量的类型检查，就可以把该变量的类型设为 `any`。
+
+2. 为了适配以前老的 JavaScript 项目，让代码快速迁移到 TypeScript，可以把变量类型设为 `any`。有些年代很久的大型 JavaScript 项目，尤其是别人的代码，很难为每一行适配正确的类型，这时你为那些类型复杂的变量加上 `any`，TypeScript 编译时就不会报错。
+
+从集合论的角度看，`any` 类型可以看成是所有其他类型的全集，包含了一切可能的类型。TypeScript 将这种类型称为「顶层类型」（top type），意为涵盖了所有下层。
+
+#### 类型推断问题
+
+对于开发者没有指定类型、TypeScript 必须自己推断类型的那些变量，如果无法推断出类型，TypeScript 就会认为该变量的类型是 `any`。
+
+```typescript
+function add(x, y) {
+  return x + y
+}
+
+add(1, [1, 2, 3]) // 不报错
+```
+
+上面示例中，函数 `add()` 的参数变量 `x` 和 `y`，都没有足够的信息，TypeScript 无法推断出它们的类型，就会认为这两个变量和函数返回值的类型都是 `any`。以至于后面就不再对函数 `add()` 进行类型检查了，怎么用都可以。
+
+对于那些类型不明显的变量，一定要显式声明类型，防止被推断为 `any`。
+
+TypeScript 提供了一个编译选项 `noImplicitAny`，打开该选项，只要推断出 `any` 类型就会报错。
+
+```
+$ tsc --noImplicitAny app.ts
+```
+
+上面命令使用了 `noImplicitAny` 编译选项进行编译，这时上面的函数 `add()` 就会报错。
+
+有一个特殊情况，即使打开了 `noImplicitAny`，使用 `let` 和 `var` 命令声明变量，但不赋值也不指定类型，是不会报错的。
+
+```typescript
+var x // 不报错
+let y // 不报错
+```
+
+上面示例中，变量 `x` 和 `y` 声明时没有赋值，也没有指定类型，TypeScript 会推断它们的类型为 `any`。这时即使打开了 `noImplicitAny`，也不会报错。
+
+```typescript
+let x
+
+x = 123
+x = { foo: 'hello' }
+```
+
+上面示例中，变量 `x` 的类型推断为 `any`，但是不报错，可以顺利通过编译。
+
+由于这个原因，建议使用 `let` 和 `var` 声明变量时，如果不赋值，就一定要显式声明类型，否则可能存在安全隐患。
+
+`const` 命令没有这个问题，因为 JavaScript 语言规定 `const` 声明变量时，必须同时进行初始化（赋值）。
+
+```typescript
+const x // 报错
+```
+
+上面示例中，`const` 命令声明的 `x` 是不能改变值的，声明时必须同时赋值，否则报错，所以它不存在类型推断为 `any` 的问题。
+
+#### 污染问题
+
+`any` 类型除了关闭类型检查，还有一个很大的问题，就是它会「污染」其他变量。它可以赋值给其他任何类型的变量（因为没有类型检查），导致其他变量出错。
+
+```typescript
+let x: any = 'hello'
+let y: number
+
+y = x // 不报错
+
+y * 123 // 不报错
+y.toFixed() // 不报错
+```
+
+上面示例中，变量 `x` 的类型是 `any`，实际的值是一个字符串。变量 `y` 的类型是 `number`，表示这是一个数值变量，但是它被赋值为 `x`，这时并不会报错。然后，变量 `y` 继续进行各种数值运算，TypeScript 也检查不出错误，问题就这样留到运行时才会暴露。
+
+污染其他具有正确类型的变量，把错误留到运行时，这就是不宜使用 `any` 类型的另一个主要原因。
+
+### unknown 类型
+
+为了解决 `any` 类型「污染」其他变量的问题，TypeScript 3.0 引入了 [`unknown` 类型](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-0.html#new-unknown-top-type)。它与 `any` 含义相同，表示类型不确定，可能是任意类型，但是它的使用有一些限制，不像 `any` 那样自由，可以视为严格版的 `any`。
+
+`unknown` 跟 `any` 的相似之处，在于所有类型的值都可以分配给 `unknown` 类型。
+
+```
+let x:unknown;
+
+x = true; // 正确
+x = 42; // 正确
+x = 'Hello World'; // 正确
+```
+
+上面示例中，变量 `x` 的类型是 `unknown`，可以赋值为各种类型的值。这与 `any` 的行为一致。
+
+`unknown` 类型跟 `any` 类型的不同之处在于，它不能直接使用。主要有以下几个限制。
+
+首先，`unknown` 类型的变量，不能直接赋值给其他类型的变量（除了 `any` 类型和 `unknown` 类型）。
+
+```
+let v:unknown = 123;
+
+let v1:boolean = v; // 报错
+let v2:number = v; // 报错
+```
+
+上面示例中，变量 `v` 是 `unknown` 类型，赋值给 `any` 和 `unknown` 以外类型的变量都会报错，这就避免了污染问题，从而克服了 `any` 类型的一大缺点。
+
+其次，不能直接调用 `unknown` 类型变量的方法和属性。
+
+```
+let v1:unknown = {foo: 123};
+v1.foo  // 报错
+
+let v2:unknown = 'hello';
+v2.trim() // 报错
+
+let v3:unknown = (n = 0) => n + 1;
+v3() // 报错
+```
+
+上面示例中，直接调用 `unknown` 类型变量的属性和方法，或者直接当作函数执行，都会报错。
+
+再次，`unknown` 类型变量能够进行的运算是有限的，只能进行比较运算（运算符 `==`、`===`、`!=`、`!==`、`||`、`&&`、`?`）、取反运算（运算符 `!`）、`typeof` 运算符和 `instanceof` 运算符这几种，其他运算都会报错。
+
+```
+let a:unknown = 1;
+
+a + 1 // 报错
+a === 1 // 正确
+```
+
+上面示例中，`unknown` 类型的变量 `a` 进行加法运算会报错，因为这是不允许的运算。但是，进行比较运算就是可以的。
+
+那么，怎么才能使用 `unknown` 类型变量呢？
+
+答案是只有经过「类型缩小」，`unknown` 类型变量才可以使用。所谓「类型缩小」，就是缩小 `unknown` 变量的类型范围，确保不会出错。
+
+```
+let a:unknown = 1;
+
+if (typeof a === 'number') {
+  let r = a + 10; // 正确
+}
+```
+
+上面示例中，`unknown` 类型的变量 `a` 经过 `typeof` 运算以后，能够确定实际类型是 `number`，就能用于加法运算了。这就是「类型缩小」，即将一个不确定的类型缩小为更明确的类型。
+
+下面是另一个例子。
+
+```
+let s:unknown = 'hello';
+
+if (typeof s === 'string') {
+  s.length; // 正确
+}
+```
+
+上面示例中，确定变量 `s` 的类型为字符串以后，才能调用它的 `length` 属性。
+
+这样设计的目的是，只有明确 `unknown` 变量的实际类型，才允许使用它，防止像 `any` 那样可以随意乱用，「污染」其他变量。类型缩小以后再使用，就不会报错。
+
+总之，`unknown` 可以看作是更安全的 `any`。一般来说，凡是需要设为 `any` 类型的地方，通常都应该优先考虑设为 `unknown` 类型。
+
+在集合论上，`unknown` 也可以视为所有其他类型（除了 `any`）的全集，所以它和 `any` 一样，也属于 TypeScript 的顶层类型。
+
+### never 类型
+
+为了保持与集合论的对应关系，以及类型运算的完整性，TypeScript 还引入了「空类型」的概念，即该类型为空，不包含任何值。
+
+由于不存在任何属于「空类型」的值，所以该类型被称为 `never`，即不可能有这样的值。
+
+```
+let x:never;
+```
+
+上面示例中，变量 `x` 的类型是 `never`，就不可能赋给它任何值，否则都会报错。
+
+`never` 类型的使用场景，主要是在一些类型运算之中，保证类型运算的完整性，详见后面章节。另外，不可能返回值的函数，返回值的类型就可以写成 `never`，详见《函数》一章。
+
+如果一个变量可能有多种类型（即联合类型），通常需要使用分支处理每一种类型。这时，处理所有可能的类型之后，剩余的情况就属于 `never` 类型。
+
+```
+function fn(x:string|number) {
+  if (typeof x === 'string') {
+    // ...
+  } else if (typeof x === 'number') {
+    // ...
+  } else {
+    x; // never 类型
+  }
+}
+```
+
+上面示例中，参数变量 `x` 可能是字符串，也可能是数值，判断了这两种情况后，剩下的最后那个 `else` 分支里面，`x` 就是 `never` 类型了。
+
+`never` 类型的一个重要特点是，可以赋值给任意其他类型。
+
+```
+function f():never {
+  throw new Error('Error');
+}
+
+let v1:number = f(); // 不报错
+let v2:string = f(); // 不报错
+let v3:boolean = f(); // 不报错
+```
+
+上面示例中，函数 `f()` 会抛出错误，所以返回值类型可以写成 `never`，即不可能返回任何值。各种其他类型的变量都可以赋值为 `f()` 的运行结果（`never` 类型）。
+
+为什么 `never` 类型可以赋值给任意其他类型呢？这也跟集合论有关，空集是任何集合的子集。TypeScript 就相应规定，任何类型都包含了 `never` 类型。因此，`never` 类型是任何其他类型所共有的，TypeScript 把这种情况称为「底层类型」（bottom type）。
+
+总之，TypeScript 有两个「顶层类型」（`any` 和 `unknown`），但是「底层类型」只有 `never` 唯一一个。
+
+## 3. 类型系统
+
+TypeScript 继承了 JavaScript 的类型，在这个基础上，定义了一套自己的类型系统。
+
+### 基本类型
+
+### 概述
+
+JavaScript 语言将值分成 8 种类型
+
+- `boolean`
+- `string`
+- `number`
+- `bigint`
+- `symbol`
+- `object`
+- `undefined`
+- `null`
+
+TypeScript 继承了 JavaScript 的类型设计，以上 8 种类型可以看作 TypeScript 的基本类型。
+
+上面所有类型的名称都是小写字母，首字母大写的 `Number`、`String`、`Boolean` 等在 JavaScript 语言中都是内置对象，而不是类型名称。
+
+`undefined` 和 `null` 既可以作为值，也可以作为类型，取决于在哪里使用它们。
+
+#### boolean 类型
+
+`boolean` 类型只包含 `true` 和 `false` 两个布尔值。
+
+```typescript
+const x: boolean = true
+const y: boolean = false
+```
+
+#### string 类型
+
+`string` 类型包含所有字符串。
+
+```typescript
+const x: string = 'hello'
+const y: string = `${x} world`
+```
+
+#### number 类型
+
+`number` 类型包含所有整数和浮点数。
+
+```typescript
+const x: number = 123
+const y: number = 3.14
+const z: number = 0xffff // 16 进制表示
+```
+
+#### bigint 类型
+
+bigint 类型包含所有的大整数。
+
+```typescript
+const x: bigint = 123n
+const y: bigint = 0xffffn
+```
+
+`bigint` 与 `number` 类型不兼容。
+
+```typescript
+const x: bigint = 123 // 报错
+const y: bigint = 3.14 // 报错
+```
+
+上面示例中，`bigint` 类型赋值为整数和小数，都会报错。
+
+`bigint` 类型是 ES2020 标准引入的。如果使用这个类型，TypeScript 编译的目标 JavaScript 版本不能低于 ES2020（即编译参数 `target` 不低于 `es2020`）。
+
+#### symbol 类型
+
+symbol 类型包含所有的 Symbol 值。
+
+```typescript
+const x: symbol = Symbol()
+```
+
+`Symbol()` 函数的返回值就是 `symbol` 类型。
+
+#### object 类型
+
+`object` 类型包含了所有对象、数组和函数。
+
+```typescript
+const x: object = { foo: 123 }
+const y: object = [1, 2, 3]
+const z: object = (n: number) => n + 1
+```
+
+#### undefined 类型，null 类型
+
+`undefined` 和 `null` 是两种独立类型，它们各自都只有一个值。
+
+`undefined` 类型只包含一个值 `undefined`，表示未定义（即还未给出定义，以后可能会有定义）。
+
+```typescript
+let x: undefined = undefined
+```
+
+上面示例中，变量 `x` 就属于 `undefined` 类型。两个 `undefined` 里面，第一个是类型，第二个是值。
+
+`null` 类型也只包含一个值 `null`，表示为空（即此处没有值）。
+
+```typescript
+const x: null = null
+```
+
+上面示例中，变量 `x` 就属于 `null` 类型。
+
+注意，如果没有声明类型的变量，被赋值为 `undefined` 或 `null`，在关闭编译设置 `noImplicitAny` 和 `strictNullChecks` 时，它们的类型会被推断为 `any`。
+
+```typescript
+// 关闭 noImplicitAny 和 strictNullChecks
+
+let a = undefined // any
+const b = undefined // any
+
+let c = null // any
+const d = null // any
+```
+
+如果希望避免这种情况，则需要打开编译选项 `strictNullChecks`。
+
+```typescript
+// 打开编译设置 strictNullChecks
+
+let a = undefined // undefined
+const b = undefined // undefined
+
+let c = null // null
+const d = null // null
+```
+
+上面示例中，打开编译设置 `strictNullChecks` 以后，赋值为 `undefined` 的变量会被推断为 `undefined` 类型，赋值为 `null` 的变量会被推断为 `null` 类型。
+
+## 4. 数组类型
+
+### 简介
+
+TypeScript 数组有一个根本特征：所有成员的类型必须相同，但是成员数量是不确定的，可以是无限数量的成员，也可以是零成员。
+
+数组的类型有两种写法。第一种写法是在数组成员的类型后面，加上一对方括号。
+
+```typescript
+let arr: number[] = [1, 2, 3] // arr -> number[], 数组成员的类型是 number
+```
+
+如果数组成员的类型比较复杂，可以写在圆括号里面。
+
+```typescript
+let arr: (number | string)[] // 数组 arr 的成员类型是 number|string
+```
+
+这个例子里面的圆括号是必须的，否则因为竖杠 `|` 的优先级低于 `[]`，TypeScript 会把 `number|string[]` 理解成 `number` 和 `string[]` 的联合类型。
+
+如果数组成员可以是任意类型，写成 `any[]`。当然，这种写法是应该避免的。
+
+```typescript
+let arr: any[]
+```
+
+数组类型的第二种写法是使用 TypeScript 内置的 `Array` 接口。
+
+```typescript
+// 数组 arr 的类型是 Array<number>，其中 number 表示成员类型是 number
+let arr: Array<number> = [1, 2, 3]
+```
+
+这种写法对于成员类型比较复杂的数组，代码可读性会稍微好一些。
+
+```typescript
+let arr: Array<number | string>
+```
+
+数组类型声明了以后，成员数量是不限制的，任意数量的成员都可以，也可以是空数组。
+
+```typescript
+let arr: number[]
+arr = []
+arr = [1]
+arr = [1, 2]
+arr = [1, 2, 3]
+```
+
+数组的成员是可以动态变化的。
+
+```typescript
+let arr: number[] = [1, 2, 3]
+
+arr[3] = 4
+arr.length = 2
+
+arr // [1, 2]
+```
+
+正是由于成员数量可以动态变化，所以 TypeScript 不会对数组边界进行检查，越界访问数组并不会报错。
+
+```typescript
+let arr: number[] = [1, 2, 3]
+let foo = arr[3] // 正确，变量 foo 的值是一个不存在的数组成员，TypeScript 并不会报错
+```
+
+TypeScript 允许使用方括号读取数组成员的类型。
+
+```typescript
+type Names = string[]
+type Name = Names[0] // string
+```
+
+上面示例中，类型 `Names` 是字符串数组，那么 `Names[0]` 返回的类型就是 `string`。
+
+由于数组成员的索引类型都是 `number`，所以读取成员类型也可以写成下面这样。
+
+```typescript
+type Names = string[]
+type Name = Names[number] // string
+```
+
+上面示例中，`Names[number]` 表示数组 `Names` 所有数值索引的成员类型，所以返回 `string`。
+
+### 数组的类型推断
+
+如果数组变量没有声明类型，TypeScript 就会推断数组成员的类型。这时，推断行为会因为值的不同，而有所不同。
+
+如果变量的初始值是空数组，那么 TypeScript 会推断数组类型是 `any[]`。
+
+```typescript
+// 推断为 any[]
+const arr = []
+```
+
+后面，为这个数组赋值时，TypeScript 会自动更新类型推断。
+
+```typescript
+const arr = []
+arr // 推断为 any[]
+
+arr.push(123)
+arr // 推断类型为 number[]
+
+arr.push('abc')
+arr // 推断类型为 (string|number)[]
+```
+
+上面示例中，数组变量 `arr` 的初始值是空数组，然后随着新成员的加入，TypeScript 会自动修改推断的数组类型。
+
+但是，类型推断的自动更新只发生初始值为空数组的情况。如果初始值不是空数组，类型推断就不会更新。
+
+```typescript
+// 推断类型为 number[]
+const arr = [123]
+
+arr.push('abc') // 报错
+```
+
+上面示例中，数组变量 `arr` 的初始值是 `[123]`，TypeScript 就推断成员类型为 `number`。新成员如果不是这个类型，TypeScript 就会报错，而不会更新类型推断。
+
+### 只读数组，const 断言
+
+JavaScript 规定，`const` 命令声明的数组变量是可以改变成员的。
+
+```typescript
+const arr = [0, 1]
+arr[0] = 2 // 修改 `const` 命令声明的数组的成员是允许的
+```
+
+很多时候确实有声明为只读数组的需求，即不允许变动数组成员。
+
+TypeScript 允许声明只读数组，方法是在数组类型前面加上 `readonly` 关键字。
+
+```typescript
+const arr: readonly number[] = [0, 1]
+
+// `arr` 是一个只读数组，删除、修改、新增数组成员都会报错
+arr[1] = 2 // 报错
+arr.push(3) // 报错
+delete arr[0] // 报错
+```
+
+TypeScript 将 `readonly number[]` 与 `number[]` 视为两种不一样的类型，后者是前者的子类型。
+
+这是因为只读数组没有 `pop()`、`push()` 之类会改变原数组的方法，所以 `number[]` 的方法数量要多于 `readonly number[]`，这意味着 `number[]` 其实是 `readonly number[]` 的子类型。
+
+子类型继承了父类型的所有特征，并加上了自己的特征，所以子类型 `number[]` 可以用于所有使用父类型的场合，反过来就不行。
+
+```typescript
+let a1: number[] = [0, 1]
+let a2: readonly number[] = a1 // 正确
+
+a1 = a2 // 报错
+```
+
+上面示例中，子类型 `number[]` 可以赋值给父类型 `readonly number[]`，但是反过来就会报错。
+
+由于只读数组是数组的父类型，所以它不能代替数组。这一点很容易产生令人困惑的报错。
+
+```typescript
+function getSum(s: number[]) {
+  // ...
+}
+
+const arr: readonly number[] = [1, 2, 3]
+
+getSum(arr) // 报错
+```
+
+上面示例中，函数 `getSum()` 的参数 `s` 是一个数组，传入只读数组就会报错。原因就是只读数组是数组的父类型，父类型不能替代子类型。这个问题的解决方法是使用类型断言 `getSum(arr as number[])`。
+
+注意，`readonly` 关键字不能与数组的泛型写法一起使用。
+
+```typescript
+// 报错
+const arr: readonly Array<number> = [0, 1]
+```
+
+上面示例中，`readonly` 与数组的泛型写法一起使用，就会报错。
+
+实际上，TypeScript 提供了两个专门的泛型，用来生成只读数组的类型。
+
+```typescript
+const a1: ReadonlyArray<number> = [0, 1]
+
+const a2: Readonly<number[]> = [0, 1]
+```
+
+上面示例中，泛型 `ReadonlyArray<T>` 和 `Readonly<T[]>` 都可以用来生成只读数组类型。两者尖括号里面的写法不一样，`Readonly<T[]>` 的尖括号里面是整个数组（`number[]`），而 `ReadonlyArray<T>` 的尖括号里面是数组成员（`number`）。
+
+只读数组还有一种声明方法，就是使用「`const` 断言」。
+
+```typescript
+const arr = [0, 1] as const
+
+arr[0] = [2] // 报错
+```
+
+上面示例中，`as const` 告诉 TypeScript，推断类型时要把变量 `arr` 推断为只读数组，从而使得数组成员无法改变。
+
+#### 多维数组
+
+TypeScript 使用 `T[][]` 的形式，表示二维数组，`T` 是最底层数组成员的类型。
+
+```typescript
+var multi: number[][] = [
+  [1, 2, 3],
+  [23, 24, 25],
+]
+```
+
+## 5. 元组类型
+
+### 简介
+
+元组（tuple）是 TypeScript 特有的数据类型，JavaScript 没有单独区分这种类型。它表示成员类型可以自由设置的数组，即数组的各个成员的类型可以不同。
+
+由于成员的类型可以不一样，所以元组必须明确声明每个成员的类型。
+
+```
+const s:[string, string, boolean]
+  = ['a', 'b', true];
+```
+
+上面示例中，元组 `s` 的前两个成员的类型是 `string`，最后一个成员的类型是 `boolean`。
+
+元组类型的写法，与上一章的数组有一个重大差异。数组的成员类型写在方括号外面（`number[]`），元组的成员类型是写在方括号里面（`[number]`）。TypeScript 的区分方法就是，成员类型写在方括号里面的就是元组，写在外面的就是数组。
+
+```
+// 数组
+let a:number[] = [1];
+
+// 元组
+let t:[number] = [1];
+```
+
+上面示例中，变量 `a` 和 `t` 的值都是 `[1]`，但是它们的类型是不一样的。`a` 是一个数组，成员类型 `number` 写在方括号外面；`t` 是一个元组，成员类型 `number` 写在方括号里面。
+
+使用元组时，必须明确给出类型声明（上例的 `[number]`），不能省略，否则 TypeScript 会把一个值自动推断为数组。
+
+```
+// a 的类型被推断为 (number | boolean)[]
+let a = [1, true];
+```
+
+上面示例中，变量 `a` 的值其实是一个元组，但是 TypeScript 会将其推断为一个联合类型的数组，即 `a` 的类型为 `(number | boolean)[]`。所以，元组必须显式给出类型声明。
+
+元组成员的类型可以添加问号后缀（`?`），表示该成员是可选的。
+
+```
+let a:[number, number?] = [1];
+```
+
+上面示例中，元组 `a` 的第二个成员是可选的，可以省略。
+
+注意，问号只能用于元组的尾部成员，也就是说，所有可选成员必须在必选成员之后。
+
+```
+type myTuple = [
+  number,
+  number,
+  number?,
+  string?
+];
+```
+
+上面示例中，元组 `myTuple` 的最后两个成员是可选的。也就是说，它的成员数量可能有两个、三个和四个。
+
+由于需要声明每个成员的类型，所以大多数情况下，元组的成员数量是有限的，从类型声明就可以明确知道，元组包含多少个成员，越界的成员会报错。
+
+```
+let x:[string, string] = ['a', 'b'];
+
+x[2] = 'c'; // 报错
+```
+
+上面示例中，变量 `x` 是一个只有两个成员的元组，如果对第三个成员赋值就报错了。
+
+但是，使用扩展运算符（`...`），可以表示不限成员数量的元组。
+
+```
+type NamedNums = [
+  string,
+  ...number[]
+];
+
+const a:NamedNums = ['A', 1, 2];
+const b:NamedNums = ['B', 1, 2, 3];
+```
+
+上面示例中，元组类型 `NamedNums` 的第一个成员是字符串，后面的成员使用扩展运算符来展开一个数组，从而实现了不定数量的成员。
+
+扩展运算符（`...`）用在元组的任意位置都可以，它的后面只能是一个数组或元组。
+
+```
+type t1 = [string, number, ...boolean[]];
+type t2 = [string, ...boolean[], number];
+type t3 = [...boolean[], string, number];
+```
+
+上面示例中，扩展运算符分别在元组的尾部、中部和头部，`...` 的后面是一个数组 `boolean[]`。
+
+如果不确定元组成员的类型和数量，可以写成下面这样。
+
+```
+type Tuple = [...any[]];
+```
+
+上面示例中，元组 `Tuple` 可以放置任意数量和类型的成员。但是这样写，也就失去了使用元组和 TypeScript 的意义。
+
+元组的成员可以添加成员名，这个成员名是说明性的，可以任意取名，没有实际作用。
+
+```
+type Color = [
+  red: number,
+  green: number,
+  blue: number
+];
+
+const c:Color = [255, 255, 255];
+```
+
+上面示例中，类型 `Color` 是一个元组，它有三个成员。每个成员都有一个名字，写在具体类型的前面，使用冒号分隔。这几个名字可以随便取，没有实际作用，只是用来说明每个成员的含义。
+
+元组可以通过方括号，读取成员类型。
+
+```
+type Tuple = [string, number];
+type Age = Tuple[1]; // number
+```
+
+上面示例中，`Tuple[1]` 返回 1 号位置的成员类型。
+
+由于元组的成员都是数值索引，即索引类型都是 `number`，所以可以像下面这样读取。
+
+```
+type Tuple = [string, number, Date];
+type TupleEl = Tuple[number];  // string|number|Date
+```
+
+上面示例中，`Tuple[number]` 表示元组 `Tuple` 的所有数值索引的成员类型，所以返回 `string|number|Date`，即这个类型是三种值的联合类型。
+
+### 只读元组
+
+元组也可以是只读的，不允许修改，有两种写法。
+
+```
+// 写法一
+type t = readonly [number, string]
+
+// 写法二
+type t = Readonly<[number, string]>
+```
+
+上面示例中，两种写法都可以得到只读元组，其中写法二是一个泛型，用到了工具类型 `Readonly<T>`。
+
+跟数组一样，只读元组是元组的父类型。所以，元组可以替代只读元组，而只读元组不能替代元组。
+
+```
+type t1 = readonly [number, number];
+type t2 = [number, number];
+
+let x:t2 = [1, 2];
+let y:t1 = x; // 正确
+
+x = y; // 报错
+```
+
+上面示例中，类型 `t1` 是只读元组，类型 `t2` 是普通元组。`t2` 类型可以赋值给 `t1` 类型，反过来就会报错。
+
+由于只读元组不能替代元组，所以会产生一些令人困惑的报错。
+
+```
+function distanceFromOrigin([x, y]:[number, number]) {
+  return Math.sqrt(x**2 + y**2);
+}
+
+let point = [3, 4] as const;
+
+distanceFromOrigin(point); // 报错
+```
+
+上面示例中，函数 `distanceFromOrigin()` 的参数是一个元组，传入只读元组就会报错，因为只读元组不能替代元组。
+
+读者可能注意到了，上例中 `[3, 4] as const` 的写法，在上一章讲到，生成的是只读数组，其实生成的同时也是只读元组。因为它生成的实际上是一个只读的 「值类型」`readonly [3, 4]`，把它解读成只读数组或只读元组都可以。
+
+上面示例报错的解决方法，就是使用类型断言，在最后一行将传入的参数断言为普通元组，详见《类型断言》一章。
+
+```
+distanceFromOrigin(
+  point as [number, number]
+)
+```
+
+### 成员数量的推断
+
+如果没有可选成员和扩展运算符，TypeScript 会推断出元组的成员数量（即元组长度）。
+
+```
+function f(point: [number, number]) {
+  if (point.length === 3) {  // 报错
+    // ...
+  }
+}
+```
+
+上面示例会报错，原因是 TypeScript 发现元组 `point` 的长度是 `2`，不可能等于 `3`，这个判断无意义。
+
+如果包含了可选成员，TypeScript 会推断出可能的成员数量。
+
+```
+function f(
+  point:[number, number?, number?]
+) {
+  if (point.length === 4) {  // 报错
+    // ...
+  }
+}
+```
+
+上面示例会报错，原因是 TypeScript 发现 `point.length` 的类型是 `1|2|3`，不可能等于 `4`。
+
+如果使用了扩展运算符，TypeScript 就无法推断出成员数量。
+
+```
+const myTuple:[...string[]]
+  = ['a', 'b', 'c'];
+
+if (myTuple.length === 4) { // 正确
+  // ...
+}
+```
+
+上面示例中，`myTuple` 只有三个成员，但是 TypeScript 推断不出它的成员数量，因为它的类型用到了扩展运算符，TypeScript 把 `myTuple` 当成数组看待，而数组的成员数量是不确定的。
+
+一旦扩展运算符使得元组的成员数量无法推断，TypeScript 内部就会把该元组当成数组处理。
+
+### 扩展运算符与成员数量
+
+扩展运算符（`...`）将数组（注意，不是元组）转换成一个逗号分隔的序列，这时 TypeScript 会认为这个序列的成员数量是不确定的，因为数组的成员数量是不确定的。
+
+这导致如果函数调用时，使用扩展运算符传入函数参数，可能发生参数数量与数组长度不匹配的报错。
+
+```
+const arr = [1, 2];
+
+function add(x:number, y:number){
+  // ...
+}
+
+add(...arr) // 报错
+```
+
+上面示例会报错，原因是函数 `add()` 只能接受两个参数，但是传入的是 `...arr`，TypeScript 认为转换后的参数个数是不确定的。
+
+有些函数可以接受任意数量的参数，这时使用扩展运算符就不会报错。
+
+```
+const arr = [1, 2, 3];
+console.log(...arr) // 正确
+```
+
+上面示例中，`console.log()` 可以接受任意数量的参数，所以传入 `...arr` 就不会报错。
+
+解决这个问题的一个方法，就是把成员数量不确定的数组，写成成员数量确定的元组，再使用扩展运算符。
+
+```
+const arr:[number, number] = [1, 2];
+
+function add(x:number, y:number){
+  // ...
+}
+
+add(...arr) // 正确
+```
+
+上面示例中，`arr` 是一个拥有两个成员的元组，所以 TypeScript 能够确定 `...arr` 可以匹配函数 `add()` 的参数数量，就不会报错了。
+
+另一种写法是使用 `as const` 断言。
+
+```
+const arr = [1, 2] as const;
+```
+
+上面这种写法也可以，因为 TypeScript 会认为 `arr` 的类型是 `readonly [1, 2]`，这是一个只读的值类型，可以当作数组，也可以当作元组。
+
+## 6. symbol
+
+## 7. 函数
+
+## 8. 对象
+
+### 简介
+
+除了原始类型，对象也是 JavaScript 最基本的数据结构。TypeScript 对于对象类型有很多规则。
+
+对象类型的最简单声明方法，就是使用大括号表示对象，在大括号内部声明每个属性和方法的类型。
+
+```typescript
+// 1. 对象 obj 的类型就写在变量名后，使用大括号描述，内部声明每个属性的属性名和类型
+const obj: {
+  x: number
+  y: number
+} = { x: 1, y: 1 }
+
+// 2. 属性的类型可以用分号结尾，也可以用逗号结尾
+type MyObj = {
+  x: number
+  y: number
+}
+
+type MyObj = {
+  x: number
+  y: number // 最后一个属性后面，可以写分号或逗号，也可以不写
+}
+
+// 3. 一旦声明了类型，对象赋值时，不能缺少指定的属性，也不能有多余的属性
+type MyObj = {
+  x: number
+  y: number
+}
+
+const o1: MyObj = { x: 1 } // 缺少 y, 报错
+const o2: MyObj = { x: 1, y: 1, z: 1 } // 多余 z 报错
+
+// 4. 读写不存在的属性也会报错
+const obj: {
+  x: number
+  y: number
+} = { x: 1, y: 1 }
+
+console.log(obj.z) // 报错
+obj.z = 1 // 报错
+
+// 5. 不能删除类型声明中存在的属性，修改属性值是可以的
+const myUser = {
+  name: 'Sabrina',
+}
+
+delete myUser.name // 报错
+myUser.name = 'Cynthia' // 正确
+
+// 6. 对象的方法使用函数类型描述
+const obj: {
+  x: number
+  y: number
+  add(x: number, y: number): number // 定义 add 的参数类型和返回值类型
+  // 或者写成
+  // add: (x:number, y:number) => number;
+} = {
+  x: 1,
+  y: 1,
+  add(x, y) {
+    return x + y
+  },
+}
+
+// 7. 对象类型可以使用方括号读取属性的类型
+type User = {
+  name: string
+  age: number
+}
+type Name = User['name'] // string
+
+// 8. 除了 type 命令可以为对象类型声明一个别名
+// TypeScript 还提供了 interface ，可以把对象类型提炼为一个接口
+// 写法一
+type MyObj = {
+  x: number
+  y: number
+}
+
+const obj: MyObj = { x: 1, y: 1 }
+
+// 写法二
+interface MyObj {
+  x: number
+  y: number
+}
+
+const obj: MyObj = { x: 1, y: 1 }
+
+// 9. TypeScript 不区分对象自身的属性和继承的属性，一律视为对象的属性。
+interface MyInterface {
+  toString(): string // 继承的属性
+  prop: number // 自身的属性
+}
+
+// obj 只写了 prop 属性，但是不报错。因为它可以继承原型上面的 toString() 方法
+const obj: MyInterface = {
+  // 正确
+  prop: 123,
+}
+```
+
+### 可选属性
+
+```typescript
+// 1. 如果某个属性是可选的（即可以忽略），需要在属性名后面加一个问号
+const obj: {
+  x: number
+  y?: number
+} = { x: 1 }
+
+// 2. 选属性等同于允许赋值为 undefined，下面两种写法是等效的
+type User = {
+  firstName: string
+  lastName?: string
+}
+
+// 等同于
+type User = {
+  firstName: string
+  // lastName 可以是字符串，也可以是 undefined，可选属性可以赋值为 undefined
+  lastName?: string | undefined
+}
+
+const obj: {
+  x: number
+  y?: number
+} = { x: 1, y: undefined } // 可选属性 y 赋值为 undefined
+
+// 3. 读取一个没有赋值的可选属性时，返回 undefined
+type MyObj = {
+  x: string
+  y?: string
+}
+
+const obj: MyObj = { x: 'hello' }
+obj.y.toLowerCase() // 报错，obj.y 返回 undefined，无法对其调用 toLowerCase()
+
+// 4. 读取可选属性之前，必须检查一下是否为 undefined
+const user: {
+  firstName: string
+  lastName?: string
+} = { firstName: 'Foo' }
+
+if (user.lastName !== undefined) {
+  console.log(`hello ${user.firstName} ${user.lastName}`)
+}
+
+// 写法一
+let firstName = user.firstName === undefined ? 'Foo' : user.firstName
+let lastName = user.lastName === undefined ? 'Bar' : user.lastName
+
+// 写法二
+let firstName = user.firstName ?? 'Foo'
+let lastName = user.lastName ?? 'Bar'
+```
+
+TypeScript 提供编译设置 `ExactOptionalPropertyTypes`，只要同时打开这个设置和 `strictNullChecks`，可选属性就不能设为 `undefined`。
+
+```typescript
+// 打开 ExactOptionsPropertyTypes 和 strictNullChecks
+const obj: {
+  x: number
+  y?: number
+} = { x: 1, y: undefined } // 报错
+```
+
+可选属性与允许设为 `undefined ` 的必选属性是不等价的。
+
+```typescript
+type A = { x: number; y?: number }
+type B = { x: number; y: number | undefined }
+
+const ObjA: A = { x: 1 } // 正确
+const ObjB: B = { x: 1 } // 报错
+```
+
+属性 `y` 如果是一个可选属性，那就可以省略不写；如果是允许设为 `undefined` 的必选属性，一旦省略就会报错，必须显式写成 `{x: 1, y: undefined}`
+
+### 只读属性
+
+```typescript
+// 1. 属性名前面加上 readonly 关键字，表示这个属性是只读属性，不能修改
+interface MyInterface {
+  readonly prop: number // prop 属性是只读属性，不能修改它的值
+}
+
+const person: {
+  readonly age: number
+} = { age: 20 }
+
+person.age = 21 // 报错
+
+// 2. 只读属性只能在对象初始化期间赋值，此后就不能修改该属性
+type Point = {
+  readonly x: number
+  readonly y: number
+}
+
+const p: Point = { x: 0, y: 0 }
+
+p.x = 100 // 报错
+
+// 3. 如果属性值是一个对象，readonly 修饰符并不禁止修改该对象的属性，只是禁止完全替换掉该对象
+interface Home {
+  readonly resident: {
+    name: string
+    age: number
+  }
+}
+
+const h: Home = {
+  resident: {
+    name: 'Vicky',
+    age: 42,
+  },
+}
+
+h.resident.age = 32 // 正确
+h.resident = {
+  name: 'Kate',
+  age: 23,
+} // 报错
+
+// 4. 如果一个对象有两个引用，即两个变量对应同一个对象，其中一个变量是可写的，
+//    另一个变量是只读的，那么从可写变量修改属性，会影响到只读变量
+interface Person {
+  name: string
+  age: number
+}
+
+interface ReadonlyPerson {
+  readonly name: string
+  readonly age: number
+}
+
+let w: Person = {
+  name: 'Vicky',
+  age: 42,
+}
+
+let r: ReadonlyPerson = w
+
+w.age += 1
+r.age // 43
+
+// 5. 如果希望属性值是只读的，除了声明时加上 readonly 关键字，
+//    还有一种方法，就是在赋值时，在对象后面加上只读断言 as const
+const myUser = {
+  name: 'Sabrina',
+} as const
+
+myUser.name = 'Cynthia' // 报错
+
+// 5. as const 属于 TypeScript 的类型推断，
+//    如果变量明确地声明了类型，那么 TypeScript 会以声明的类型为准
+const myUser: { name: string } = {
+  name: 'Sabrina',
+} as const
+
+myUser.name = 'Cynthia' // 正确
+```
+
+### 属性 index signature
+
+如果对象的属性非常多，一个个声明属性就很麻烦，而且有些时候，无法事前知道对象会有多少属性，比如外部 API 返回的对象。这时 TypeScript 允许采用 index signature 的写法来描述属性，称为「属性 index signature」。
+
+```typescript
+// 1. 字符串索引签名
+type MyObj = {
+  [property: string]: string
+}
+
+const obj: MyObj = {
+  foo: 'a',
+  bar: 'b',
+  baz: 'c',
+}
+```
+
+上面示例中，类型 `MyObj` 的属性名类型就采用了表达式形式，写在方括号里面。`[property: string]` 的 `property` 表示属性名，这个是可以随便起的，它的类型是 `string`，即属性名类型为 `string`。也就是说，不管这个对象有多少属性，只要属性名为字符串，且属性值也是字符串，就符合这个类型声明。
+
+JavaScript 对象的属性名（即上例的 `property`）的类型有三种可能，除了上例的 `string`，还有 `number` 和 `symbol`。
+
+```typescript
+type T1 = {
+  [property: number]: string
+}
+
+type T2 = {
+  [property: symbol]: string
+}
+
+type MyArr = {
+  [n: number]: number
+}
+
+const arr: MyArr = [1, 2, 3]
+// 或者
+const arr: MyArr = {
+  0: 1,
+  1: 2,
+  2: 3,
+}
+```
+
+对象可以同时有多种类型的属性名索引，比如同时有数值索引和字符串索引。但是，数值索引不能与字符串索引发生冲突，必须服从后者，这是因为在 JavaScript 语言内部，所有的数值属性名都会自动转为字符串属性名。
+
+```typescript
+type MyType = {
+  [x: number]: boolean // 报错
+  [x: string]: string
+}
+```
+
+上面示例中，类型 `MyType` 同时有两种属性名索引，但是数值索引与字符串索引冲突了，所以报错了。由于字符属性名的值类型是 `string`，数值属性名的值类型只有同样为 `string`，才不会报错。
+
+同样地，可以既声明属性名索引，也声明具体的单个属性名。如果单个属性名不符合属性名索引的范围，两者发生冲突，就会报错。
+
+```typescript
+type MyType = {
+  foo: boolean // 报错
+  [x: string]: string
+}
+```
+
+上面示例中，属性名 `foo` 符合属性名的字符串索引，但是两者的属性值类型不一样，所以报错了。
+
+属性的索引类型写法，建议谨慎使用，因为属性名的声明太宽泛，约束太少。另外，属性名的数值索引不宜用来声明数组，因为采用这种方式声明数组，就不能使用各种数组方法以及 `length` 属性，因为类型里面没有定义这些东西。
+
+```typescript
+type MyArr = {
+  [n: number]: number
+}
+
+const arr: MyArr = [1, 2, 3]
+arr.length // 报错
+```
+
+上面示例中，读取 `arr.length` 属性会报错，因为类型 `MyArr` 没有这个属性。
+
+### 解构赋值
+
+```typescript
+// 1. 解构赋值用于直接从对象中提取属性
+
+// 从对象 product 提取了三个属性，并声明属性名的同名变量
+const { id, name, price } = product
+
+// 2. 解构赋值的类型写法，跟为对象声明类型是一样的
+const {
+  id,
+  name,
+  price,
+}: {
+  id: string
+  name: string
+  price: number
+} = product
+
+// 3. 目前没法为解构变量指定类型，因为对象解构里面的冒号，JavaScript 指定了其他用途
+
+// 冒号不是表示属性 x 和 y 的类型，而是为这两个属性指定新的变量名
+let { x: foo, y: bar } = obj
+
+// 等同于
+let foo = obj.x
+let bar = obj.y
+
+// 如果要为 x 和 y 指定类型，不得不写成下面这样
+let { x: foo, y: bar }: { x: string; y: number } = obj
+
+function draw({ shape: Shape, xPos: number = 100, yPos: number = 100 }) {
+  let myShape = shape // 报错
+  let x = xPos // 报错
+}
+
+// 函数 draw() 的参数是一个对象解构，里面的冒号很像是为变量指定类型，其实是为对应的属性指定新的变量名。
+// 所以，TypeScript 就会解读成，函数体内不存在变量 shape，而是属性 shape 的值被赋值给了变量 Shape
+```
+
+### 结构类型原则
+
+只要对象 B 满足 对象 A 的结构特征，TypeScript 就认为对象 B 兼容对象 A 的类型，这称为「结构类型」原则（structural typing）。
+
+```typescript
+// 对象 A 只有一个属性 x，类型为 number。对象 B 满足这个特征，因此兼容对象 A
+// 只要可以使用 A 的地方，就可以使用 B。
+type A = {
+  x: number
+}
+
+type B = {
+  x: number
+  y: number
+}
+
+// A 和 B 并不是同一个类型，但是 B 可以赋值给 A，因为 B 满足 A 的结构特征
+const B = {
+  x: 1,
+  y: 1,
+}
+
+const A: { x: number } = B // 正确
+```
+
+根据「结构类型」原则，TypeScript 检查某个值是否符合指定类型时，并不是检查这个值的类型名（即「名义类型」），而是检查这个值的结构是否符合要求（即「结构类型」）。
+
+TypeScript 之所以这样设计，是为了符合 JavaScript 的行为。JavaScript 并不关心对象是否严格相似，只要某个对象具有所要求的属性，就可以正确运行。
+
+如果类型 B 可以赋值给类型 A，TypeScript 就认为 B 是 A 的子类型（subtyping），A 是 B 的父类型。子类型满足父类型的所有结构特征，同时还具有自己的特征。凡是可以使用父类型的地方，都可以使用子类型，即子类型兼容父类型。
+
+这种设计有时会导致令人惊讶的结果。
+
+```typescript
+type myObj = {
+  x: number
+  y: number
+}
+
+function getSum(obj: myObj) {
+  let sum = 0
+
+  for (const n of Object.keys(obj)) {
+    const v = obj[n] // 报错
+    sum += Math.abs(v)
+  }
+
+  return sum
+}
+```
+
+上面示例中，函数 `getSum()` 要求传入参数的类型是 `myObj`，但是实际上所有与 `myObj` 兼容的对象都可以传入。这会导致 `const v = obj[n]` 这一行报错，原因是 `obj[n]` 取出的属性值不一定是数值（`number`），使得变量 `v` 的类型被推断为 `any`。如果项目设置为不允许变量类型推断为 `any`，代码就会报错。写成下面这样，就不会报错。
+
+```typescript
+type MyObj = {
+  x: number
+  y: number
+}
+
+function getSum(obj: MyObj) {
+  return Math.abs(obj.x) + Math.abs(obj.y)
+}
+```
+
+上面示例不会报错，因为函数体内部只使用了属性 `x` 和 `y`，这两个属性有明确的类型声明，保证 `obj.x` 和 `obj.y` 肯定是数值。虽然与 `MyObj` 兼容的任何对象都可以传入函数 `getSum()`，但是只要不使用其他属性，就不会有类型报错。
+
+### 严格字面量检查
+
+如果对象使用字面量表示，会触发 TypeScript 的严格字面量检查（strict object literal checking）。如果字面量的结构跟类型定义的不一样（比如多出了未定义的属性），就会报错。
+
+```typescript
+const point: {
+  x: number
+  y: number
+} = {
+  x: 1,
+  y: 1,
+  z: 1, // 报错
+}
+```
+
+上面示例中，等号右边是一个对象的字面量，这时会触发严格字面量检查。只要有类型声明中不存在的属性（本例是 `z`），就会导致报错。
+
+如果等号右边不是字面量，而是一个变量，根据结构类型原则，是不会报错的。
+
+```typescript
+const myPoint = {
+  x: 1,
+  y: 1,
+  z: 1,
+}
+
+const point: {
+  x: number
+  y: number
+} = myPoint // 正确
+```
+
+上面示例中，等号右边是一个变量，就不会触发严格字面量检查，从而不报错。
+
+TypeScript 对字面量进行严格检查的目的，主要是防止拼写错误。一般来说，字面量大多数来自手写，容易出现拼写错误，或者误用 API。
+
+```typescript
+type Options = {
+  title: string
+  darkMode?: boolean
+}
+
+const obj: Options = {
+  title: '我的网页',
+  darkmode: true, // 报错
+}
+```
+
+上面示例中，属性 `darkMode` 拼写错了，成了 `darkmode`。如果没有严格字面量规则，就不会报错，因为 `darkMode` 是可选属性，根据结构类型原则，任何对象只要有 `title` 属性，都认为符合 `Options` 类型。
+
+规避严格字面量检查，可以使用中间变量。
+
+```typescript
+let myOptions = {
+  title: '我的网页',
+  darkmode: true,
+}
+
+const obj: Options = myOptions
+```
+
+上面示例中，创建了一个中间变量 `myOptions`，就不会触发严格字面量规则，因为这时变量 `obj` 的赋值，不属于直接字面量赋值。
+
+如果你确认字面量没有错误，也可以使用类型断言规避严格字面量检查。
+
+```typescript
+const obj: Options = {
+  title: '我的网页',
+  darkmode: true,
+} as Options
+```
+
+上面示例使用类型断言 `as Options`，告诉编译器，字面量符合 `Options` 类型，就能规避这条规则。
+
+如果允许字面量有多余属性，可以像下面这样在类型里面定义一个通用属性。
+
+```typescript
+let x: {
+  foo: number
+  [x: string]: any
+}
+
+x = { foo: 1, baz: 2 } // Ok
+```
+
+上面示例中，变量 `x` 的类型声明里面，有一个属性的字符串索引签名（`[x: string]`），导致任何字符串属性名都是合法的。
+
+由于严格字面量检查，字面量对象传入函数必须很小心，不能有多余的属性。
+
+```typescript
+interface Point {
+  x: number
+  y: number
+}
+
+function computeDistance(point: Point) {
+  /*...*/
+}
+
+computeDistance({ x: 1, y: 2, z: 3 }) // 报错
+computeDistance({ x: 1, y: 2 }) // 正确
+```
+
+上面示例中，对象字面量传入函数 `computeDistance()` 时，不能有多余的属性，否则就通不过严格字面量检查。
+
+编译器选项 `suppressExcessPropertyErrors`，可以关闭多余属性检查。下面是它在 `tsconfig.json` 文件里面的写法。
+
+```typescript
+{
+  "compilerOptions": {
+    "suppressExcessPropertyErrors": true
+  }
+}
+```
+
+### 最小可选属性规则
+
+根据「结构类型」原则，如果一个对象的所有属性都是可选的，那么其他对象跟它都是结构类似的。
+
+```typescript
+type Options = {
+  a?:number;
+  b?:number;
+  c?:number;
+};
+```
+
+上面示例中，类型 `Options` 的所有属性都是可选的，所以它可以是一个空对象，也就意味着任意对象都满足 `Options` 的结构。
+
+为了避免这种情况，TypeScript 2.4 引入了一个「最小可选属性规则」，也称为 [「弱类型检测」](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-4.html#weak-type-detection)（weak type detection）。
+
+```typescript
+type Options = {
+  a?:number;
+  b?:number;
+  c?:number;
+};
+
+const opts = {d: 123};
+
+const obj: Options = opts; // 报错
+```
+
+上面示例中，对象 `opts` 与类型 `Options` 没有共同属性，赋值给该类型的变量就会报错。
+
+报错原因是，如果某个类型的所有属性都是可选的，那么该类型的对象必须至少存在一个可选属性，不能所有可选属性都不存在。这就叫做「最小可选属性规则」。
+
+如果想规避这条规则，要么在类型里面增加一条索引属性（`[propName: string]: someType`），要么使用类型断言（`opts as Options`）。
+
+### 空对象
+
+空对象是 TypeScript 的一种特殊值，也是一种特殊类型。
+
+```typescript
+const obj = {};
+obj.prop = 123; // 报错
+```
+
+上面示例中，变量 `obj` 的值是一个空对象，然后对 `obj.prop` 赋值就会报错。
+
+原因是这时 TypeScript 会推断变量 `obj` 的类型为空对象，实际执行的是下面的代码。
+
+```typescript
+const obj: {} = {};
+```
+
+空对象没有自定义属性，所以对自定义属性赋值就会报错。空对象只能使用继承的属性，即继承自原型对象 `Object.prototype` 的属性。
+
+```typescript
+obj.toString() // 正确
+```
+
+上面示例中，`toString()` 方法是一个继承自原型对象的方法，TypeScript 允许在空对象上使用。
+
+回到本节开始的例子，这种写法其实在 JavaScript 很常见：先声明一个空对象，然后向空对象添加属性。但是，TypeScript 不允许动态添加属性，所以对象不能分步生成，必须生成时一次性声明所有属性。
+
+```typescript
+// 错误
+const pt = {};
+pt.x = 3;
+pt.y = 4;
+
+// 正确
+const pt = {
+  x: 3,
+  y: 4
+};
+```
+
+如果确实需要分步声明，一个比较好的方法是，使用扩展运算符（`...`）合成一个新对象。
+
+```typescript
+const pt0 = {};
+const pt1 = {x: 3};
+const pt2 = {y: 4};
+
+const pt = {
+  ...pt0, ...pt1, ...pt2
+};
+```
+
+上面示例中，对象 `pt` 是三个部分合成的，这样既可以分步声明，也符合 TypeScript 静态声明的要求。
+
+空对象作为类型，其实是 `Object` 类型的简写形式。
+
+```typescript
+let d: {};
+// 等同于
+// let d: Object;
+
+d = {};
+d = { x: 1 };
+d = 'hello';
+d = 2;
+```
+
+上面示例中，各种类型的值（除了 `null` 和 `undefined`）都可以赋值给空对象类型，跟 `Object` 类型的行为是一样的。
+
+因为 `Object` 可以接受各种类型的值，而空对象是 `Object` 类型的简写，所以它不会有严格字面量检查，赋值时总是允许多余的属性，只是不能读取这些属性。
+
+```typescript
+interface Empty { }
+const b: Empty = {myProp: 1, anotherProp: 2}; // 正确
+b.myProp // 报错
+```
+
+上面示例中，变量 `b` 的类型是空对象，视同 `Object` 类型，不会有严格字面量检查，但是读取多余的属性会报错。
+
+如果想强制使用没有任何属性的对象，可以采用下面的写法。
+
+```typescript
+interface WithoutProperties {
+  [key: string]: never;
+}
+
+// 报错
+const a:WithoutProperties = {prop: 1};
+```
+
+上面的示例中，`[key: string]: never` 表示字符串属性名是不存在的，因此其他对象进行赋值时就会报错。
+
+## 9. 接口
+
+### 简介
+
+interface 是对象的模板，可以看作是一种类型约定。使用了某个模板的对象，就拥有了指定的类型结构。
+
+```typescript
+// 定义了接口 Person，指定一个对象模板，拥有三个属性 firstName、lastName 和 age
+// 任何实现这个接口的对象，都必须拥有这三个属性，并且必须符合规定的类型
+interface Person {
+  firstName: string;
+  lastName: string;
+  age: number;
+}
+
+// 实现该接口很简单，只要指定它作为对象的类型
+const p: Person = {
+  firstName: 'John',
+  lastName: 'Smith',
+  age: 25
+};
+```
+
+## 10. 类
+
+## 11. 泛型
+
+## 12. Enum
+
+## 类型断言
+
+## 模块
+
+## namespace
+
+## 装饰器
+
+## declare 关键字
+
+## d.ts 类型声明文件
+
+## 类型运算符
+
+## 类型映射
+
+## 类型工具
+
+## 注释指令
+
+## tsconfig.json 文件
+
+## tsc 命令
