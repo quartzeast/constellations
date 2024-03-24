@@ -23,7 +23,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['var(--font-space-grotesk)', ...fontFamily.sans],
-        mono: ['JetBrains Mono', ...fontFamily.mono],
+        mono: ['JetBrains Mono', 'Sarasa Nerd Semibold', ...fontFamily.mono],
       },
       colors: {
         primary: colors.pink,

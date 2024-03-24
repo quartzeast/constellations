@@ -1,3 +1,4 @@
+import { useContext } from 'react'
 import Image from './Image'
 import Link from './Link'
 
