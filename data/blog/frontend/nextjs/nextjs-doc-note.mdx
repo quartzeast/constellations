@@ -11,3 +11,740 @@ summary: 'Next.js 官方文档精简版，快速掌握 Next.js'
 
 ### 什么是 Next.js?
 
+## 介绍
+
+### 什么是 Next.js
+
+Next.js 是一个用于构建全栈 Web 应用的 React 框架。你可以使用 React 组件来构建用户界面，Next.js 负责提供额外的功能和优化。
+
+在底层，Next.js 还抽象并自动配置了 React 所需的工具，比如打包、编译等。这让你能够专注于构建应用，而不是把时间在浪费在配置上。
+
+Next.js 能帮助你构建交互式、动态且快速的 React 应用程序。
+
+### 主要功能
+
+| Feature                                                                                    | Description                                                                                                                                           |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Routing](https://nextjs.org/docs/app/building-your-application/routing)                   | 一个基于文件系统的路由，建立在 Server Components 之上，支持布局、嵌套路由、加载状态、错误处理等更多功能。                                             |
+| [Rendering](https://nextjs.org/docs/app/building-your-application/rendering)               | 客户端和服务器端渲染，使用 Client 和 Server Components。通过在服务器上结合静态和动态渲染进一步优化，使用 Next.js。在 Edge 和 Node.js 运行时进行流处理 |
+| [Data Fetching](https://nextjs.org/docs/app/building-your-application/data-fetching)       | 在 Server Components 中通过 `async/await` 简化数据获取，并扩展了 `fetch` API 以支持请求记忆化（memoization）、数据缓存和重新验证（revalidation）      |
+| [Styling](https://nextjs.org/docs/app/building-your-application/styling)                   | 支持多种样式方法，包括 CSS 模块、Tailwind CSS 和 CSS-in-JS。                                                                                          |
+| [Optimizations](https://nextjs.org/docs/app/building-your-application/optimizing)          | 图片、字体和脚本优化，以提升应用核心网络指标和用户体验                                                                                                |
+| [TypeScript](https://nextjs.org/docs/app/building-your-application/configuring/typescript) | 改进了对 TypeScript 的支持，包括更好的类型检查和更高效的编译，以及自定义 TypeScript 插件和类型检查器                                                  |
+
+### 应用路由 vs 页面路由
+
+Next.js 有两种不同的路由机制：应用路由（App Router）和页面路由（Pages Router）。应用路由是较新的路由机制，它允许你使用 React 的最新特性，如服务端组件（Server Components）和流式传输（Streaming）。页面路由是 Next.js 原始的路由机制，它允许你构建服务端渲染的 React 应用程序，并且继续支持旧版 Next.js 应用程序。
+
+---
+
+## 安装
+
+### 自动安装
+
+使用 `create-next-app` 来启动一个新的 Next.js 应用。
+
+```plain text
+npx create-next-app@latest
+
+What is your project named? my-app
+Would you like to use TypeScript? No / Yes
+Would you like to use ESLint? No / Yes
+Would you like to use Tailwind CSS? No / Yes
+Would you like to use `src/` directory? No / Yes
+Would you like to use App Router? (recommended) No / Yes
+Would you like to customize the default import alias (@/*)? No / Yes
+What import alias would you like configured? @/*
+```
+
+- Next.js 默认包含了 TypeScript、ESLint 和 Tailwind CSS 的配置
+- 可以在项目的根目录中选择性地使用一个名为 `src` 的目录，以便将应用程序的代码与配置文件分开
+
+### 手动安装
+
+要手动创建一个新的 Next.js 应用程序，安装所需的软件包：
+
+```
+npm install next@latest react@latest react-dom@latest
+```
+
+打开你的 `package.json` 文件，并添加以下脚本：
+
+```json
+{
+  "scripts: {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  }
+}
+```
+
+这些脚本对应于开发应用程序的不同阶段：
+
+- `dev`: 运行 `next dev` 以在开发模式下启动 Next.js
+- `build`: 运行 `next build` 为生产环境构建应用
+- `start`: 运行 `next start` 启动 Next.js 的生产服务器
+- `lint`: 运行 `next lint` 设置 Next.js 内置的 ESLint 配置
+
+#### 创建目录
+
+Next.js 使用基于文件系统的路由方式，应用中的路由是由文件结构决定的。
+
+##### `app` 目录
+
+对于新应用推荐使用应用路由（App Router）。这个路由允许使用 React 的最新特性，并且是基于社区反馈对页面路由（Pages Router）的演进。
+
+创建一个名为 `app/` 的文件夹，然后添加一个 `layout.tsx` 和 `page.tsx` 文件。当用户访问你应用程序的根目录（/）时，这些文件将被渲染。![App Folder Structure](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fapp-getting-started.png&w=3840&q=75)
+
+在 `app/layout.tsx` 文件中创建一个[根布局](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#root-layout-required)，包含必需的 `<html>` 和 `<body>` 标签：
+
+```typescript:app/layout.tsx
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+最后，在 `app/page.tsx` 文件中创建一个包含一些初始内容的首页：
+
+```typescript:app/page.tsx
+export default function Page() {
+  return <h1>Hello, Next.js!</h1>
+}
+```
+
+值得注意的是：如果你忘记创建 `layout.tsx`，当你使用 `next dev` 命令运行开发服务器时，Next.js 会自动创建这个文件。
+
+##### `pages` 目录（可选）
+
+如果你更喜欢使用页面路由（Pages Router）而不是应用路由（App Router），你可以在项目的根目录下创建一个 `pages/` 文件夹。
+
+然后，在你的 `pages` 文件夹内添加一个 `index.tsx` 文件。这将作为你的首页（/）：
+
+```typescript:pages/index.tsx
+export default function Page() {
+  return <h1>Hello, Next.js!</h1>
+}
+```
+
+接下来，在 `pages/` 目录中添加一个 `_app.tsx` 文件来定义全局布局。了解更多关于[自定义 `App` 文件](https://nextjs.org/docs/pages/building-your-application/routing/custom-app)的信息：
+
+```typescript:pages/_app.tsx
+import type { AppProps } from 'next/app'
+
+export default function App({ Component, pageProps }: AppProps) {
+  return <Component {...pageProps} />
+}
+```
+
+最后，在 `pages/` 目录中添加一个 `_document.tsx` 文件来控制服务器的初始响应。了解更多关于[自定义 `Document` 文件](https://nextjs.org/docs/pages/building-your-application/routing/custom-document)的信息：
+
+```typescript:pages/_document.tsx
+import { Html, Head, Main, NextScript } from 'next/document'
+
+export default function Document() {
+  return (
+    <Html>
+      <Head />
+      <body>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  )
+}
+```
+
+关于 [Pages Router](https://nextjs.org/docs/pages/building-your-application/routing/pages-and-layouts)。
+
+值得注意的是：尽管你可以在同一个项目中使用两种路由机制，但是应用路由（`app`）中的路由将会优先于页面路由（`pages`）。建议在新项目中只使用一种路由机制，避免混淆。
+
+##### `public` 目录（可选）
+
+创建一个名为 `public` 的文件夹来存储静态资源，如图片、字体等。然后，你的代码可以通过基础 URL（/）引用 `public` 目录中的文件。
+
+### 运行开发服务器
+
+1. 运行 `npm run dev` 命令来启动开发服务器
+2. 访问 `http://localhost:3000` 来查看你的应用程序
+3. 编辑 `app/page.tsx` 文件（或者 `pages/index.tsx` 文件）并保存，你将在浏览器中看到更新后的结果
+
+## Next.js 项目结构
+
+Next.js 应用程序项目结构的概览。涵盖了顶级文件和文件夹、配置文件，以及 `app` 和 `pages` 目录内的路由约定。
+
+点击文件和文件夹名称可以了解更多关于每个约定的信息。
+
+### Top-level folders
+
+顶级文件夹用于组织你的应用程序代码和静态资源。
+
+![Route segments to path segments](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Ftop-level-folders.png&w=3840&q=75)
+
+| [`app`](https://nextjs.org/docs/app/building-your-application/routing)                     | App Router                         |
+| ------------------------------------------------------------------------------------------ | ---------------------------------- |
+| [`pages`](https://nextjs.org/docs/pages/building-your-application/routing)                 | Pages Router                       |
+| [`public`](https://nextjs.org/docs/app/building-your-application/optimizing/static-assets) | Static assets to be served         |
+| [`src`](https://nextjs.org/docs/app/building-your-application/configuring/src-directory)   | Optional application source folder |
+
+### Top-level files
+
+顶级文件用于配置你的应用，管理依赖关系，运行中间件，集成监控工具以及定义环境变量。
+
+|                                                                                                               |                                         |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Next.js**                                                                                                   |                                         |
+| [`next.config.js`](https://nextjs.org/docs/app/api-reference/next-config-js)                                  | Configuration file for Next.js          |
+| [`package.json`](https://nextjs.org/docs/getting-started/installation#manual-installation)                    | Project dependencies and scripts        |
+| [`instrumentation.ts`](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation)      | OpenTelemetry and Instrumentation file  |
+| [`middleware.ts`](https://nextjs.org/docs/app/building-your-application/routing/middleware)                   | Next.js request middleware              |
+| [`.env`](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables)             | Environment variables                   |
+| [`.env.local`](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables)       | Local environment variables             |
+| [`.env.production`](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables)  | Production environment variables        |
+| [`.env.development`](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables) | Development environment variables       |
+| [`.eslintrc.json`](https://nextjs.org/docs/app/building-your-application/configuring/eslint)                  | Configuration file for ESLint           |
+| `.gitignore`                                                                                                  | Git files and folders to ignore         |
+| `next-env.d.ts`                                                                                               | TypeScript declaration file for Next.js |
+| `tsconfig.json`                                                                                               | Configuration file for TypeScript       |
+| `jsconfig.json`                                                                                               | Configuration file for JavaScript       |
+
+### `app` 路由约定
+
+[`app` 路由器](https://nextjs.org/docs/app)中使用以下文件约定用于定义路由和处理元数据：
+
+#### 路由文件
+
+|                                                                                                   |                     |                              |
+| ------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------- |
+| [`layout`](https://nextjs.org/docs/app/api-reference/file-conventions/layout)                     | `.js` `.jsx` `.tsx` | Layout                       |
+| [`page`](https://nextjs.org/docs/app/api-reference/file-conventions/page)                         | `.js` `.jsx` `.tsx` | Page                         |
+| [`loading`](https://nextjs.org/docs/app/api-reference/file-conventions/loading)                   | `.js` `.jsx` `.tsx` | Loading UI                   |
+| [`not-found`](https://nextjs.org/docs/app/api-reference/file-conventions/not-found)               | `.js` `.jsx` `.tsx` | Not found UI                 |
+| [`error`](https://nextjs.org/docs/app/api-reference/file-conventions/error)                       | `.js` `.jsx` `.tsx` | Error UI                     |
+| [`global-error`](https://nextjs.org/docs/app/api-reference/file-conventions/error#global-errorjs) | `.js` `.jsx` `.tsx` | Global error UI              |
+| [`route`](https://nextjs.org/docs/app/api-reference/file-conventions/route)                       | `.js` `.ts`         | API endpoint                 |
+| [`template`](https://nextjs.org/docs/app/api-reference/file-conventions/template)                 | `.js` `.jsx` `.tsx` | Re-rendered layout           |
+| [`default`](https://nextjs.org/docs/app/api-reference/file-conventions/default)                   | `.js` `.jsx` `.tsx` | Parallel route fallback page |
+
+#### 嵌套路由
+
+|                                                                                                |                      |
+| ---------------------------------------------------------------------------------------------- | -------------------- |
+| [`folder`](https://nextjs.org/docs/app/building-your-application/routing#route-segments)       | Route segment        |
+| [`folder/folder`](https://nextjs.org/docs/app/building-your-application/routing#nested-routes) | Nested route segment |
+
+#### 动态路由
+
+|                                                                                                                              |                                  |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| [`[folder\]`](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes#convention)                       | Dynamic route segment            |
+| [`[...folder\]`](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes#catch-all-segments)            | Catch-all route segment          |
+| [`[[...folder\]]`](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes#optional-catch-all-segments) | Optional catch-all route segment |
+
+#### 路由组和私有文件夹
+
+|                                                                                                       |                                                  |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [`(folder)`](https://nextjs.org/docs/app/building-your-application/routing/route-groups#convention)   | Group routes without affecting routing           |
+| [`_folder`](https://nextjs.org/docs/app/building-your-application/routing/colocation#private-folders) | Opt folder and all child segments out of routing |
+
+#### 并行和拦截路由
+
+|                                                                                                                  |                            |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| [`@folder`](https://nextjs.org/docs/app/building-your-application/routing/parallel-routes#slots)                 | Named slot                 |
+| [`(.)folder`](https://nextjs.org/docs/app/building-your-application/routing/intercepting-routes#convention)      | Intercept same level       |
+| [`(..)folder`](https://nextjs.org/docs/app/building-your-application/routing/intercepting-routes#convention)     | Intercept one level above  |
+| [`(..)(..)folder`](https://nextjs.org/docs/app/building-your-application/routing/intercepting-routes#convention) | Intercept two levels above |
+| [`(...)folder`](https://nextjs.org/docs/app/building-your-application/routing/intercepting-routes#convention)    | Intercept from root        |
+
+#### 元数据文件约定
+
+**App 图标**
+
+|                                                                                                                                   |                                     |                          |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------ |
+| [`favicon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons#favicon)                                | `.ico`                              | Favicon file             |
+| [`icon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons#icon)                                      | `.ico` `.jpg` `.jpeg` `.png` `.svg` | App Icon file            |
+| [`icon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons#generate-icons-using-code-js-ts-tsx)       | `.js` `.ts` `.tsx`                  | Generated App Icon       |
+| [`apple-icon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons#apple-icon)                          | `.jpg` `.jpeg`, `.png`              | Apple App Icon file      |
+| [`apple-icon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons#generate-icons-using-code-js-ts-tsx) | `.js` `.ts` `.tsx`                  | Generated Apple App Icon |
+
+**Open Graph 和推特图像**
+
+|                                                                                                                                               |                              |                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | :------------------------: |
+| [`opengraph-image`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image#opengraph-image)                      | `.jpg` `.jpeg` `.png` `.gif` |   Open Graph image file    |
+| [`opengraph-image`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image#generate-images-using-code-js-ts-tsx) | `.js` `.ts` `.tsx`           | Generated Open Graph image |
+| [`twitter-image`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image#twitter-image)                          | `.jpg` `.jpeg` `.png` `.gif` |     Twitter image file     |
+| [`twitter-image`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image#generate-images-using-code-js-ts-tsx)   | `.js` `.ts` `.tsx`           |  Generated Twitter image   |
+
+**SEO**
+
+|                                                                                                                                |             |                       |
+| ------------------------------------------------------------------------------------------------------------------------------ | ----------- | --------------------- |
+| [`sitemap`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap#sitemap-files-xml)                     | `.xml`      | Sitemap file          |
+| [`sitemap`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap#generating-a-sitemap-using-code-js-ts) | `.js` `.ts` | Generated Sitemap     |
+| [`robots`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots#static-robotstxt)                        | `.txt`      | Robots file           |
+| [`robots`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots#generate-a-robots-file)                  | `.js` `.ts` | Generated Robots file |
+
+### `pages` 路由约定
+
+**特殊文件**
+
+|                                                                                                                               |                     |                   |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------- |
+| [`_app`](https://nextjs.org/docs/pages/building-your-application/routing/custom-app)                                          | `.js` `.jsx` `.tsx` | Custom App        |
+| [`_document`](https://nextjs.org/docs/pages/building-your-application/routing/custom-document)                                | `.js` `.jsx` `.tsx` | Custom Document   |
+| [`_error`](https://nextjs.org/docs/pages/building-your-application/routing/custom-error#more-advanced-error-page-customizing) | `.js` `.jsx` `.tsx` | Custom Error Page |
+| [`404`](https://nextjs.org/docs/pages/building-your-application/routing/custom-error#404-page)                                | `.js` `.jsx` `.tsx` | 404 Error Page    |
+| [`500`](https://nextjs.org/docs/pages/building-your-application/routing/custom-error#500-page)                                | `.js` `.jsx` `.tsx` | 500 Error Page    |
+
+**路由**
+
+|                                                                                                                  |                     |             |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------- | ----------- |
+| **Folder convention**                                                                                            |                     |             |
+| [`index`](https://nextjs.org/docs/pages/building-your-application/routing/pages-and-layouts#index-routes)        | `.js` `.jsx` `.tsx` | Home page   |
+| [`folder/index`](https://nextjs.org/docs/pages/building-your-application/routing/pages-and-layouts#index-routes) | `.js` `.jsx` `.tsx` | Nested page |
+| **File convention**                                                                                              |                     |             |
+| [`index`](https://nextjs.org/docs/pages/building-your-application/routing/pages-and-layouts#index-routes)        | `.js` `.jsx` `.tsx` | Home page   |
+| [`file`](https://nextjs.org/docs/pages/building-your-application/routing/pages-and-layouts)                      | `.js` `.jsx` `.tsx` | Nested page |
+
+**动态路由**
+
+|                                                                                                                                      |                     |                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | -------------------------------- |
+| **Folder convention**                                                                                                                |                     |                                  |
+| [`[folder\]/index`](https://nextjs.org/docs/pages/building-your-application/routing/dynamic-routes)                                  | `.js` `.jsx` `.tsx` | Dynamic route segment            |
+| [`[...folder\]/index`](https://nextjs.org/docs/pages/building-your-application/routing/dynamic-routes#catch-all-segments)            | `.js` `.jsx` `.tsx` | Catch-all route segment          |
+| [`[[...folder\]]/index`](https://nextjs.org/docs/pages/building-your-application/routing/dynamic-routes#optional-catch-all-segments) | `.js` `.jsx` `.tsx` | Optional catch-all route segment |
+| **File convention**                                                                                                                  |                     |                                  |
+| [`[file\]`](https://nextjs.org/docs/pages/building-your-application/routing/dynamic-routes)                                          | `.js` `.jsx` `.tsx` | Dynamic route segment            |
+| [`[...file\]`](https://nextjs.org/docs/pages/building-your-application/routing/dynamic-routes#catch-all-segments)                    | `.js` `.jsx` `.tsx` | Catch-all route segment          |
+| [`[[...file\]]`](https://nextjs.org/docs/pages/building-your-application/routing/dynamic-routes#optional-catch-all-segments)         | `.js` `.jsx` `.tsx` | Optional catch-all route segment |
+
+---
+
+## 构建应用
+
+如果你对 Next.js 还不熟悉，建议从[路由](https://nextjs.org/docs/app/building-your-application/routing)、[渲染](https://nextjs.org/docs/app/building-your-application/rendering)、[数据获取](https://nextjs.org/docs/app/building-your-application/data-fetching)和[样式](https://nextjs.org/docs/app/building-your-application/styling)这几个部分开始。然后可以研究其他部分，如[优化](https://nextjs.org/docs/app/building-your-application/optimizing)和[配置](https://nextjs.org/docs/app/building-your-application/configuring)。最后可以查看[部署](https://nextjs.org/docs/app/building-your-application/deploying)和[升级](https://nextjs.org/docs/app/building-your-application/upgrading)部分。
+
+### 路由基础
+
+每个应用的骨架都是路由。本页将介绍 web 路由的基本概念，以及如何在 Next.js 中处理路由。
+
+#### 术语
+
+术语快速参考：
+
+![Terminology for Component Tree](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fterminology-component-tree.png&w=3840&q=75)
+
+- **树（Tree）**：用于可视化层次结构的约定。例如，具有父组件和子组件的组件树、文件夹结构等
+- **子树（Subtree）**：树的一部分，从一个新根（第一个）开始，到叶子（最后一个）结束
+- **根（Root）**：树或子树中的第一个节点，如根布局
+- **叶子（Leaf）**：子树中没有子节点的节点，如 URL 路径中的最后一个段
+
+![Terminology for URL Anatomy](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fterminology-url-anatomy.png&w=3840&q=75)
+
+- **URL 段（URL Segment）**：由斜杠分隔的 URL 路径的一部分
+- **URL 路径（URL Path）**：URL 中域名之后的部分（由段组成）
+
+#### `app` 路由器
+
+在版本 13 中，Next.js 引入了一个新的基于 [React Server Components](/docs/app/building-your-application/rendering/server-components) 的应用路由器（App Router），它支持共享布局、嵌套路由、加载状态、错误处理等。
+
+应用路由器（App Router）在一个名为 `app` 的新目录中工作。`app` 目录与 `pages` 目录协同工作，以允许渐进式采用。这样，你可以选择将应用中的某些路由采用新的行为，同时保持 `pages` 目录中的其他路由使用之前的行为。如果你的应用使用了 `pages` 目录，请同时查看[页面路由器](/docs/pages/building-your-application/routing)（Pages Router）文档。
+
+> **小贴士**：App Router 优先于 Pages Router。跨目录的路由不应解析到相同的 URL 路径，这将导致构建时错误，以防止冲突发生。
+
+![Next.js App Directory](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fnext-router-directories.png&w=3840&q=75)
+
+默认情况下，`app` 内的组件是 [React Server Component](https://nextjs.org/docs/app/building-your-application/rendering/server-components)。这是一种性能优化方式，让你可以轻松采用它们，你也可以使用 [Client Component](https://nextjs.org/docs/app/building-your-application/rendering/client-components)。
+
+> 推荐：如果你对服务器组件不熟悉，可以查看 [Server](https://nextjs.org/docs/app/building-your-application/rendering/server-components) 页面。
+
+#### 文件夹和文件的角色
+
+Next.js 使用基于文件系统的路由器，其中：
+
+- **文件夹** 被用来定义路由。一个路由是一条由嵌套文件夹组成的单一路径，遵循从 根文件夹 到包含 `page.js` 文件的最终 叶子文件夹 (**leaf folder**) 的文件系统层级结构。参见 [定义路由](https://nextjs.org/docs/app/building-your-application/routing/defining-routes)。
+- 文件 被用来创建展示在路由段的 UI。参见 [特殊文件](https://nextjs.org/docs/app/building-your-application/routing#file-conventions)。
+
+#### 路由段
+
+路由中的每个文件夹代表一个路由段（route segment）。每个路由段都映射到 URL 路径中的相应段（segement）。
+
+![How Route Segments Map to URL Segments](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Froute-segments-to-path-segments.png&w=3840&q=75)
+
+#### 嵌套路由
+
+要创建嵌套路由，可以将文件夹相互嵌套。可以通过在 `app` 目录中嵌套两个新文件夹来添加一个新的 `/dashboard/settings` 路由。
+
+`/dashboard/settings` 路由由三个段组成：
+
+- `/` (Root segment)
+- `dashboard` (Segment)
+- `settings` (Leaf segment)
+
+#### 文件约定
+
+Next.js 提供了一组特殊文件，用于在嵌套路由中创建具有特定行为的 UI：
+
+|                                                                                       |                                                                                                |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`layout`](/docs/app/building-your-application/routing/pages-and-layouts#layouts)     | Shared UI for a segment and its children                                                       |
+| [`page`](/docs/app/building-your-application/routing/pages-and-layouts#pages)         | Unique UI of a route and make routes publicly accessible                                       |
+| [`loading`](/docs/app/building-your-application/routing/loading-ui-and-streaming)     | Loading UI for a segment and its children                                                      |
+| [`not-found`](/docs/app/api-reference/file-conventions/not-found)                     | Not found UI for a segment and its children                                                    |
+| [`error`](/docs/app/building-your-application/routing/error-handling)                 | Error UI for a segment and its children                                                        |
+| [`global-error`](/docs/app/building-your-application/routing/error-handling)          | Global Error UI                                                                                |
+| [`route`](/docs/app/building-your-application/routing/route-handlers)                 | Server-side API endpoint                                                                       |
+| [`template`](/docs/app/building-your-application/routing/pages-and-layouts#templates) | Specialized re-rendered Layout UI                                                              |
+| [`default`](/docs/app/api-reference/file-conventions/default)                         | Fallback UI for [Parallel Routes](/docs/app/building-your-application/routing/parallel-routes) |
+
+> **值得一提**：`.js`、`.jsx` 或 `.tsx` 文件扩展名可用于特殊文件。
+
+#### 组件层次结构
+
+在路由段（route segment）的特定文件中定义的 React 组件按照特定的层级结构进行渲染：
+
+- `layout.js`
+- `template.js`
+- `error.js` (React error boundary)
+- `loading.js` (React suspense boundary)
+- `not-found.js` (React error boundary)
+- `page.js` or nested `layout.js`
+
+![Component Hierarchy for File Conventions](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Ffile-conventions-component-hierarchy.png&w=3840&q=75)
+
+在嵌套路由中，一个段（segement）的组件将嵌套在其父段的组件内部。
+
+![Nested File Conventions Component Hierarchy](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fnested-file-conventions-component-hierarchy.png&w=3840&q=75)
+
+#### Colocation
+
+除了特殊文件外，还可以选择在 `app` 目录的文件夹内共同放置（colocation）你自己的文件（例如组件、样式、测试等）。
+
+这是因为虽然文件夹定义了路由，但只有 `page.js` 或 `route.js` 返回的内容是公开可寻址的。
+
+![An example folder structure with colocated files](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fproject-organization-colocation.png&w=3840&q=75)
+
+了解更多关于 [项目组织和 colocation 设置](https://nextjs.org/docs/app/building-your-application/routing/colocation) 的信息。
+
+#### 高级路由模式
+
+应用路由器还提供了一组约定，帮助您实现更高级的路由模式。这些包括：
+
+- [Parallel Routes](https://nextjs.org/docs/app/building-your-application/routing/parallel-routes): 允许同时在同一视图中显示两个或更多页面，这些页面可以独立导航。可以将它们用于具有自己子导航的分割视图。例如，仪表板。
+- [Intercepting Routes](https://nextjs.org/docs/app/building-your-application/routing/intercepting-routes): 允许拦截一个路由并在另一个路由的上下文中显示它。当保持当前页面的上下文很重要时，可以使用这些。例如，在编辑一个任务时查看所有任务，或在动态中展开一张照片。
+
+这些模式允许构建更丰富、更复杂的 UI，使传统对小团队和个人开发者来说复杂的功能变得亲民。
+
+### 定义路由
+
+如何在 Next.js 应用程序中定义和组织路由。
+
+#### 创建路由
+
+Next.js 使用基于文件系统的路由器，其中文件夹用于定义路由。
+
+每个文件夹代表一个 [**路由段（route segment）**](https://nextjs.org/docs/app/building-your-application/routing#route-segments)，它映射到一个 **URL** 段（segment）。要创建一个 [嵌套路由](https://nextjs.org/docs/app/building-your-application/routing#nested-routes)，可以将文件夹嵌套在彼此内部。
+
+![Route segments to path segments](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Froute-segments-to-path-segments.png&w=3840&q=75)
+
+一个特殊的 [`page.js` 文件](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#pages) 被用来使路由段公开可访问。
+
+![Defining Routes](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fdefining-routes.png&w=3840&q=75)
+
+在这个例子中，`/dashboard/analytics` URL 路径不是公开可访问的，因为它没有对应的 `page.js` 文件。这个文件夹可以用来存储组件、样式表、图片或其他 colocation 的文件。
+
+> 小贴士：`.js`、`.jsx` 或 `.tsx` 文件扩展名可以用于特殊文件。
+
+#### 创建 UI
+
+特殊文件约定（[Special file conventions](https://nextjs.org/docs/app/building-your-application/routing#file-conventions)）用于为每个路由段创建 UI。最常见的是 页面（[pages](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#pages)），用于显示特定于路由的独特 UI，以及 布局（[layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#layouts)），用于显示跨多个路由共享的 UI。
+
+例如，要创建一个页面，在 `app` 目录中添加一个 `page.js` 文件，并导出一个 React 组件：
+
+```tsx:app/page.tsx" switcher
+export default function Page() {
+  return <h1>Hello, Next.js!</h1>
+}
+```
+
+### 页面和布局
+
+特殊文件 [layout.js](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#layouts)、[page.js](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#pages) 和 [template.js](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#templates) 允许你为 [路由](https://nextjs.org/docs/app/building-your-application/routing/defining-routes#creating-routes) 创建 UI。本节将指导你如何以及何时使用这些特殊文件。
+
+#### 页面
+
+页面是 **独特** 于某个路由的 UI。你可以通过从 `page.js` 文件默认导出一个组件来定义页面。
+
+例如，要创建你的 `index` 页面，在 `app` 目录中添加 `page.js` 文件：
+
+![page.js special file](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fpage-special-file.png&w=3840&q=75)
+
+```tsx:app/page.tsx
+// `app/page.tsx` is the UI for the `/` URL
+export default function Page() {
+  return <h1>Hello, Home page!</h1>
+}
+```
+
+然后，要创建更多页面，只需创建一个新文件夹并在其中添加 `page.js` 文件。例如，要为 `/dashboard` 路由创建页面，创建一个名为 `dashboard` 的新文件夹，并在其中添加 `page.js` 文件：
+
+```tsx:app/dashboard/page.tsx
+// `app/dashboard/page.tsx` is the UI for the `/dashboard` URL
+export default function Page() {
+  return <h1>Hello, Dashboard Page!</h1>
+}
+```
+
+> - 页面可以使用 `.js`、`.jsx` 或 `.tsx` 文件扩展名
+> - 页面始终是 [路由子树](https://nextjs.org/docs/app/building-your-application/routing#terminology) 的 [叶子](https://nextjs.org/docs/app/building-your-application/routing#terminology)
+> - 需要 `page.js` 文件才能使路由段公开可访问
+> - 页面默认是 [Server Component](https://nextjs.org/docs/app/building-your-application/rendering/server-components)，但可以设置为 [Client Component](https://nextjs.org/docs/app/building-your-application/rendering/client-components)
+> - 页面可以获取数据。查看[数据获取](https://nextjs.org/docs/app/building-your-application/data-fetching)部分了解更多信息
+
+#### 布局
+
+布局是在多个路由之间 **共享** 的 UI。在导航时，布局保持状态，保持交互性，并且不会重新渲染。布局还可以进行 [嵌套](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#nesting-layouts)。
+
+您可以通过默认从 `layout.js` 文件导出一个 React 组件来定义布局。该组件应该接受一个 `children` 属性，在渲染使将填充子布局（如果存在）或页面。
+
+例如，布局将与 `/dashboard` 和 `/dashboard/settings` 页面共享：
+
+![layout.js special file](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Flayout-special-file.png&w=3840&q=75)
+
+```tsx:app/dashboard/layout.tsx
+export default function DashboardLayout({
+  children, // will be a page or nested layout
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <section>
+      {/* Include shared UI here e.g. a header or sidebar */}
+      <nav></nav>
+
+      {children}
+    </section>
+  )
+}
+```
+
+**根布局（必需）**
+
+根布局在 `app` 目录的顶层定义，并适用于所有路由。这个布局是 **必需的** 并且必须包含 `html` 和 `body` 标签，允许你修改服务器返回的初始 HTML。
+
+```tsx:app/layout.tsx
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        {/* Layout UI */}
+        <main>{children}</main>
+      </body>
+    </html>
+  )
+}
+```
+
+**嵌套布局**
+
+默认情况下，文件夹层次结构中的布局是 **嵌套** 的，这意味着它们通过 `children` prop 包装子布局。你可以通过在特定路由段（文件夹）中添加 `layout.js` 来嵌套布局。
+
+例如，为 `/dashboard` 路由创建布局，在 `dashboard` 文件夹中添加一个新的 `layout.js` 文件：
+
+![Nested Layout](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fnested-layout.png&w=3840&q=75)
+
+```tsx:app/dashboard/layout.tsx
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return <section>{children}</section>
+}
+```
+
+如果您要结合上述两个布局，根布局（`app/layout.js`）将包装 dashboard 布局（`app/dashboard/layout.js`），后者将包装 `app/dashboard/*` 内部的路由段。
+
+这两个布局将如下嵌套：
+
+![Nested Layouts](https://nextjs.org/_next/image?url=%2Fdocs%2Flight%2Fnested-layouts-ui.png&w=3840&q=75)
+
+> - 布局可以使用 `.js`、`.jsx` 或 `.tsx` 文件扩展名
+> - 只有根布局可以包含 `<html>` 和 `<body>` 标签
+> - 当同一文件夹中定义了 `layout.js` 和 `page.js` 文件时，布局将包装页面
+> - 布局默认是 [服务器组件](https://nextjs.org/docs/app/building-your-application/rendering/server-components)，但可以设置为 [客户端组件](https://nextjs.org/docs/app/building-your-application/rendering/client-components)
+> - 布局可以获取数据。查看[数据获取](https://nextjs.org/docs/app/building-your-application/data-fetching)部分了解更多信息
+> - 无法在父布局和其子级之间传递数据。然而，您可以在路由中多次获取相同的数据，React 将 [自动消除重复的请求](https://nextjs.org/docs/app/building-your-application/caching#request-memoization) 而不影响性能
+> - 布局无法访问其下方的路由段。要访问所有路由段，您可以在客户端组件中使用 或
+> - 您可以使用 [路由组](https://nextjs.org/docs/app/building-your-application/routing/route-groups) 来选择性地将特定路由段加入或移出共享布局
+> - 您可以使用 [路由组](https://nextjs.org/docs/app/building-your-application/routing/route-groups) 来创建多个根布局。查看[这里的例子](https://nextjs.org/docs/app/building-your-application/routing/route-groups#creating-multiple-root-layouts)
+> - **从 `pages` 目录迁移：** 根布局取代了 和 文件。[查看迁移指南](https://nextjs.org/docs/app/building-your-application/upgrading/app-router-migration#migrating-_documentjs-and-_appjs)
+
+#### 模板
+
+模板与布局类似，它们包装每个子布局或页面。与跨路由保持状态的布局不同，模板在导航时为其每个子项创建新实例。这意味着当用户在共享模板的路由之间导航时，组件的新实例将被挂载，DOM 元素将被重新创建，状态将 **不** 被保留，效果将重新同步。
+
+可能有些情况下您需要这些特定的行为，而模板将比布局更合适的选择。例如：
+
+- 依赖于 `useEffect`（例如记录页面浏览量）和 `useState`（例如每页反馈表单）的功能。
+- 更改默认框架行为。例如，布局内的 Suspense Boundaries 只在第一次加载布局时显示回退内容，而不是在切换页面时。对于模板，回
+
+### 链接和导航
+
+在 Next.js 中，有四种方式在路由之间导航：
+
+- 使用 [`Link` 组件](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#link-component)
+- 使用 [`useRouter` 钩子](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#userouter-hook)（[客户端组件](https://nextjs.org/docs/app/building-your-application/rendering/client-components)）
+- 使用 [`redirect` 函数](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#redirect-function)（[服务器端组件](https://nextjs.org/docs/app/building-your-application/rendering/server-components)）
+- 使用原生的 [History API](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#using-the-native-history-api)
+
+本页面将介绍如何使用这些选项，并深入探讨导航的工作原理。
+
+#### `<Link>` 组件
+
+`<Link>` 是一个内置组件，它扩展了 HTML `<a>` 标签，提供了 [预取（prefetching）](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#2-prefetching) 和客户端路由之间的导航。这是在 Next.js 中路由之间导航的主要和推荐方式。
+
+可以通过从 `next/link` 导入它，并为组件传递 `href` 属性来使用它：
+
+```tsx:app/page.tsx
+import Link from 'next/link'
+
+export default function Page() {
+  return <Link href="/dashboard">Dashboard</Link>
+}
+```
+
+**示例**
+
+1. 链接到动态段
+
+   当链接到 [动态段](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes) 时，可以使用 [模板字符串和插值](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Template_literals) 来生成一系列链接。例如，要生成一系列博客文章：
+
+   ```tsx:app/blog/PostList.js
+   import Link from 'next/link'
+
+   export default function PostList({ posts }) {
+     return (
+       <ul>
+         {posts.map((post) => (
+           <li key={post.id}>
+             <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+           </li>
+         ))}
+       </ul>
+     )
+   }
+   ```
+
+2. 检查活动链接
+
+   可以使用 [`usePathname()`](https://nextjs.org/docs/app/api-reference/functions/use-pathname) 来确定链接是否处于活动状态。例如，要为活动链接添加一个类，您可以检查当前的 `pathname` 是否匹配链接的 `href`：
+
+   ```tsx:app/components/links.tsx
+   'use client'
+
+   import { usePathname } from 'next/navigation'
+   import Link from 'next/link'
+
+   export function Links() {
+     const pathname = usePathname()
+
+     return (
+       <nav>
+         <ul>
+           <li>
+             <Link className={`link ${pathname === '/' ? 'active' : ''}`} href="/">
+               Home
+             </Link>
+           </li>
+           <li>
+             <Link
+               className={`link ${pathname === '/about' ? 'active' : ''}`}
+               href="/about"
+             >
+               About
+             </Link>
+           </li>
+         </ul>
+       </nav>
+     )
+   }
+   ```
+
+3. 滚动到 `id`
+
+   Next.js 应用路由器的默认行为是在导航到新路由时 **滚动到顶部，或在前进和后退导航时保持滚动位置。**
+
+   如果您想滚动到特定的 `id`，您可以在 URL 后附加一个 `#` 哈希链接，或者直接将哈希链接传递给 `href` 属性。这是可能的，因为 `<Link>` 渲染为 `<a>` 元素。
+
+   ```tsx
+   <Link href="/dashboard#settings">Settings</Link>
+
+   // Output
+   <a href="/dashboard#settings">Settings</a>
+   ```
+
+   如果在导航时页面不可见，Next.js 将滚动到 [页面](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#pages)。
+
+4. 禁止滚动恢复
+
+   Next.js 应用路由器的默认行为是在导航到新路由时 **滚动到顶部，或在前进和后退导航时保持滚动位置。**如果您想禁用这种行为，您可以向 `<Link>` 组件传递 `scroll={false}`，或者向 `router.push()` 或 `router.replace()` 传递 `scroll: false`。
+
+   ```tsx
+   // next/link
+   <Link href="/dashboard" scroll={false}>
+     Dashboard
+   </Link>
+   ```
+
+   ```tsx
+   // useRouter
+   import { useRouter } from 'next/navigation'
+
+   const router = useRouter()
+
+   router.push('/dashboard', { scroll: false })
+   ```
+
+#### `useRouter` 钩子
+
+`useRouter` 钩子允许你从 [Client Component](https://nextjs.org/docs/app/building-your-application/rendering/client-components) 编程式地更改路由。
+
+```tsx:app/page.js
+'use client'
+
+import { useRouter } from 'next/navigation'
+
+export default function Page() {
+  const router = useRouter()
+
+  return (
+    <button type="button" onClick={() => router.push('/dashboard')}>
+      Dashboard
+    </button>
+  )
+}
+```
+
+查看 [API 参考](https://nextjs.org/docs/app/api-reference/functions/use-router) 了解 `useRouter` 方法的完整列表。
+
+**建议**：除非您有特定的使用 `useRouter` 的需求，否则使用 `<Link>` 组件在路由之间导航。

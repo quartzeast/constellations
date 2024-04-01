@@ -1,0 +1,137 @@
+---
+title: 深入浅出 useEffect
+date: 2023-11-07
+lastmod: 2023-11-07
+tags: ['React', 'Frontend']
+draft: false
+summary: 深入分析 useEffect 的用法和注意事项
+---
+
+<TOCInline toc={props.toc} exclude="Introduction" />
+
+在 React 中，什么是 Effect？Effect 和事件处理器有什么不同呢？本文将详细介绍 React 中 `useEffect` 的使用方式。
+
+## 初识 useEffect
+
+在 React 中，副作用是指组件与其外部世界之间的任何交互。常见副作用包括获取数据、订阅事件或操作浏览器 DOM 等。副作用不能直接放置于组件渲染逻辑中，而是需要通过特定的方式进行管理。
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/useEffect1.png)
+</div>
+
+React 提供了两种创建副作用的方式：一是通过事件处理函数，二是通过 `useEffect` Hook。事件处理函数会在既定的事件（例如点击、输入等）发生时被触发。而 `useEffect` Hook 则允许我们在组件生命周期的不同时刻执行代码。
+
+举个获取电影数据的例子，这显然是一个副作用，因为它与组件外部的 API 进行交互。我们可以通过两种方式来创建此副作用：
+
+- 在特定事件（例如用户点击按钮）发生时获取数据，这可以通过事件处理函数来实现。
+- 在组件挂载（首次渲染）之后立即获取数据，这可以通过 `useEffect` Hook 来实现。
+
+这两种方式都可以达到相同的结果，但执行时机不同。事件处理函数在事件发生时执行，而 `useEffect` Hook 则在组件首次渲染后执行（具体时机还取决于依赖数组）。
+
+除了指定要执行的代码之外，`useEffect` Hook 还可选择性地传入依赖数组和清理函数。依赖数组用于判断副作用是否需要在组件更新时再次执行，清理函数则会在组件卸载之前执行，用于清理副作用带来的影响。
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/useEffect2.png)
+</div>
+
+总而言之，`useEffect` Hook 的本质是使组件与外部系统保持同步。事件处理函数则用于响应用户交互。在可能的情况下，应该优先使用事件处理函数来处理副作用，仅在需要在组件生命周期特定时刻执行代码时才使用 `useEffect` Hook。
+
+## useEffect 的依赖数组
+
+## 深入理解 React 中 useEffect 的依赖数组
+
+`useEffect` Hook 是 React 中用于管理副作用的强大工具。然而，正确使用其依赖数组对于优化组件性能和避免错误至关重要。本文将深入讲解 `useEffect` 的依赖数组及其相关概念。
+
+### 依赖数组的作用
+
+默认情况下，`useEffect` 会在组件每次渲染后执行其副作用。这对于一些需要在每次渲染后更新 DOM 的场景来说可能适用，但对于大多数情况，我们并不希望如此。
+
+我们可以通过向 `useEffect` 的第二个参数传入一个依赖数组来改变这种行为。**依赖数组用于告诉 React 何时需要重新执行副作用**。
+
+- 空数组 (`[]`) 表示副作用仅在组件挂载时执行一次。
+- 包含变量的数组 (`[var1, var2, ...]`) 表示只有这些变量中的某一个发生变化时，副作用才会重新执行。
+- 没有数组 (`undefined`) 表示副作用会在每次渲染中执行（通常应避免）。
+
+**依赖数组的本质是使 `useEffect` 仅在相关数据发生变化时才执行副作用，从而提升性能并避免不必要的重新渲染。**
+
+### 依赖数组的内容
+
+依赖数组应该包含 `useEffect` 内部使用到的所有状态变量 (`state`) 和 props。\*\*
+
+例如，如果副作用更新文档标题，则依赖数组应包含用于存储标题的 props 或 state 变量。
+
+### 同步机制
+
+我们可以将 `useEffect` Hook 视为一个事件监听器，它监听依赖项 (`dependency`) 的变化。**当依赖项发生变化时，`useEffect` 会重新执行副作用。**
+
+本质上，`useEffect` 使组件与其内部使用的状态和 props 保持同步。例如，更新文档标题的副作用会使组件与浏览器的标题保持同步。
+
+### 依赖数组与组件生命周期
+
+依赖数组与组件的生命周期密切相关：
+
+- 空数组 (`[]`) 的依赖数组表示副作用仅在组件挂载时执行一次。
+- 包含变量的数组表示副作用会在初始渲染以及后续因这些变量变化导致的重渲染中执行。
+- 没有数组 (`undefined`) 会导致副作用在每次渲染中执行，这通常会带来性能问题。
+
+### 常见依赖数组用法
+
+**1. 空数组 (`[]`)**
+
+适用于仅在组件挂载时执行一次的副作用，例如获取初始数据。
+
+**2. 包含变量的数组 (`[var1, var2, ...]`)**
+
+适用于依赖特定变量的副作用，例如监听某个 state 或 prop 的变化。
+
+**3. 没有数组 (`undefined`)**
+
+应尽量避免使用，会导致副作用在每次渲染中执行，降低性能。
+
+### 注意事项
+
+- 副作用不应该直接操作 DOM，可以使用 `useRef` Hook 来存储 DOM 节点引用。
+- 如果副作用更新了 state，会触发额外的渲染来更新 UI。
+
+### 总结
+
+通过学习 `useEffect` 的依赖数组，我们能够更加高效地管理组件的副作用，提升组件性能并避免不必要的渲染。
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/useEffect3.png)
+</div>
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/useEffect4.png)
+</div>
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/useEffect5.png)
+</div>
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/useEffect6.png)
+</div>
+
+## useEffect 的清理函数
+
+在 React 中，Effect 的第三个部分是清理函数（cleanup function）。这个清理函数允许我们在组件卸载或 Effect 重新执行之前执行一些清理工作。这对于管理副作用（如订阅、定时器、HTTP 请求等）非常重要，以确保应用的性能和正确性。
+
+### 清理函数的工作时机
+
+1. 组件卸载时：当组件从 DOM 中移除时，清理函数将执行，这是清理组件副作用的理想时机。例如，如果你的组件在挂载时设置了页面标题，那么在组件卸载时，你可能希望将标题重置为其原始值。
+
+2. Effect 重新执行之前：在依赖项发生变化并且 Effect 即将重新执行之前，清理函数也会被调用。这确保了上一个 Effect 的副作用被清理，从而避免了潜在的错误或性能问题。
+
+### 清理函数的使用场景
+
+- 取消 HTTP 请求：如果你在 Effect 中发起了 HTTP 请求，而组件在请求完成前就被卸载或重新渲染，使用清理函数取消这个请求可以避免不必要的状态更新和潜在的错误。
+- 取消订阅：如果你在 Effect 中订阅了某个外部数据源（如 WebSocket 连接或其他 API 服务），那么在组件卸载时取消订阅是必要的，以避免内存泄漏。
+- 清理定时器：如果你设置了定时器（如 `setTimeout` 或 `setInterval`），在组件卸载或 Effect 重新执行前清理定时器可以防止定时器触发时尝试更新已卸载组件的状态。
+- 移除事件监听器：如果你为 DOM 元素添加了事件监听器，使用清理函数移除这些监听器可以防止内存泄漏和意外的行为。
+
+### 最佳实践
+
+- 单一职责原则：每个 Effect 应该只做一件事情。如果你需要在组件中创建多个副作用，就使用多个 `useEffect` 钩子。这样做不仅使每个 Effect 更容易理解，而且也使得使用清理函数来清理副作用变得更加简单。
+
+通过理解和正确使用清理函数，你可以确保组件的副作用被适当管理，从而避免了常见的陷阱，如内存泄漏、无效的状态更新和性能问题。这也是 React 中管理组件生命周期和副作用的重要机制之一。

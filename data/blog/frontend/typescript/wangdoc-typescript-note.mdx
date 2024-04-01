@@ -2,7 +2,7 @@
 title: 网道 TypeScript 教程量子速读版
 date: 2024-3-22
 lastmod: 2024-3-22
-tags: ['TypeScript', 'Frontend']
+tags: ['TypeScript', 'Frontend', '量子速读']
 draft: false
 summary: 阮一峰老师 TypeScript 教程精简版，快速掌握 TypeScript
 ---
@@ -23,7 +23,7 @@ TypeScript 是微软开发的一种基于 JavaScript 的编程语言，旨在增
 
 一旦确定某个值的类型，就意味着，这个值具有该类型的所有特征，可以进行该类型的所有运算。凡是适用该类型的地方，都可以使用这个值；凡是不适用该类型的地方，使用这个值都会报错。
 
-** 类型是人为添加的一种编程约束和用法提示。** 主要目的是在软件开发过程中，为编译器和开发工具提供更多的验证和帮助，帮助提高代码质量，减少错误。
+类型是人为添加的一种编程约束和用法提示。主要目的是在软件开发过程中，为编译器和开发工具提供更多的验证和帮助，帮助提高代码质量，减少错误。
 
 ```typescript
 // 参数 n 的类型为 number，表示这个位置只能使用数值，传入其他类型的值就会报错
@@ -344,7 +344,7 @@ y.toFixed() // 不报错
 
 `unknown` 跟 `any` 的相似之处，在于所有类型的值都可以分配给 `unknown` 类型。
 
-```
+```typescript
 let x:unknown;
 
 x = true; // 正确
@@ -358,7 +358,7 @@ x = 'Hello World'; // 正确
 
 首先，`unknown` 类型的变量，不能直接赋值给其他类型的变量（除了 `any` 类型和 `unknown` 类型）。
 
-```
+```typescript
 let v:unknown = 123;
 
 let v1:boolean = v; // 报错
@@ -369,7 +369,7 @@ let v2:number = v; // 报错
 
 其次，不能直接调用 `unknown` 类型变量的方法和属性。
 
-```
+```typescript
 let v1:unknown = {foo: 123};
 v1.foo  // 报错
 
@@ -384,7 +384,7 @@ v3() // 报错
 
 再次，`unknown` 类型变量能够进行的运算是有限的，只能进行比较运算（运算符 `==`、`===`、`!=`、`!==`、`||`、`&&`、`?`）、取反运算（运算符 `!`）、`typeof` 运算符和 `instanceof` 运算符这几种，其他运算都会报错。
 
-```
+```typescript
 let a:unknown = 1;
 
 a + 1 // 报错
@@ -397,7 +397,7 @@ a === 1 // 正确
 
 答案是只有经过「类型缩小」，`unknown` 类型变量才可以使用。所谓「类型缩小」，就是缩小 `unknown` 变量的类型范围，确保不会出错。
 
-```
+```typescript
 let a:unknown = 1;
 
 if (typeof a === 'number') {
@@ -409,7 +409,7 @@ if (typeof a === 'number') {
 
 下面是另一个例子。
 
-```
+```typescript
 let s:unknown = 'hello';
 
 if (typeof s === 'string') {
@@ -431,7 +431,7 @@ if (typeof s === 'string') {
 
 由于不存在任何属于「空类型」的值，所以该类型被称为 `never`，即不可能有这样的值。
 
-```
+```typescript
 let x:never;
 ```
 
@@ -441,7 +441,7 @@ let x:never;
 
 如果一个变量可能有多种类型（即联合类型），通常需要使用分支处理每一种类型。这时，处理所有可能的类型之后，剩余的情况就属于 `never` 类型。
 
-```
+```typescript
 function fn(x:string|number) {
   if (typeof x === 'string') {
     // ...
@@ -457,7 +457,7 @@ function fn(x:string|number) {
 
 `never` 类型的一个重要特点是，可以赋值给任意其他类型。
 
-```
+```typescript
 function f():never {
   throw new Error('Error');
 }
@@ -829,180 +829,110 @@ var multi: number[][] = [
 
 ### 简介
 
-元组（tuple）是 TypeScript 特有的数据类型，JavaScript 没有单独区分这种类型。它表示成员类型可以自由设置的数组，即数组的各个成员的类型可以不同。
+元组（tuple）是 TypeScript 特有的数据类型。元组成员的类型可以不同。
 
-由于成员的类型可以不一样，所以元组必须明确声明每个成员的类型。
-
-```
-const s:[string, string, boolean]
+```typescript
+// 1. 成员的类型可以不一样，所以元组必须明确声明每个成员的类型
+const s: [string, string, boolean]
   = ['a', 'b', true];
-```
 
-上面示例中，元组 `s` 的前两个成员的类型是 `string`，最后一个成员的类型是 `boolean`。
-
-元组类型的写法，与上一章的数组有一个重大差异。数组的成员类型写在方括号外面（`number[]`），元组的成员类型是写在方括号里面（`[number]`）。TypeScript 的区分方法就是，成员类型写在方括号里面的就是元组，写在外面的就是数组。
-
-```
+// 2. 数组的元素类型写在方括号外 number[]
+//    元组的元素类型写在方括号里面 [number]
 // 数组
-let a:number[] = [1];
+let a: number[] = [1];
 
 // 元组
-let t:[number] = [1];
-```
+let t: [number] = [1];
 
-上面示例中，变量 `a` 和 `t` 的值都是 `[1]`，但是它们的类型是不一样的。`a` 是一个数组，成员类型 `number` 写在方括号外面；`t` 是一个元组，成员类型 `number` 写在方括号里面。
+// 3. 使用元组时，必须明确给出类型声明，如上面的 [number]
+//    否则 TypeScript 会把一个数组字面量自动推断为数组，元组必须显式给出类型声明
+let a = [1, true]; // TS 将 a 推断为一个联合类型的数组，即 (number | boolean)[]
 
-使用元组时，必须明确给出类型声明（上例的 `[number]`），不能省略，否则 TypeScript 会把一个值自动推断为数组。
+// 4. 元组成员的类型可以添加问号后缀 ?，表示该成员是可选的
+let a: [number, number?] = [1];
 
-```
-// a 的类型被推断为 (number | boolean)[]
-let a = [1, true];
-```
-
-上面示例中，变量 `a` 的值其实是一个元组，但是 TypeScript 会将其推断为一个联合类型的数组，即 `a` 的类型为 `(number | boolean)[]`。所以，元组必须显式给出类型声明。
-
-元组成员的类型可以添加问号后缀（`?`），表示该成员是可选的。
-
-```
-let a:[number, number?] = [1];
-```
-
-上面示例中，元组 `a` 的第二个成员是可选的，可以省略。
-
-注意，问号只能用于元组的尾部成员，也就是说，所有可选成员必须在必选成员之后。
-
-```
+// 问号只能用于元组的尾部成员，所有可选成员必须在必选成员之后
 type myTuple = [
   number,
   number,
   number?,
   string?
 ];
-```
 
-上面示例中，元组 `myTuple` 的最后两个成员是可选的。也就是说，它的成员数量可能有两个、三个和四个。
-
-由于需要声明每个成员的类型，所以大多数情况下，元组的成员数量是有限的，从类型声明就可以明确知道，元组包含多少个成员，越界的成员会报错。
-
-```
+// 5. 由于需要声明每个成员的类型，元组的成员数量通常是有限的，越界的成员会报错
 let x:[string, string] = ['a', 'b'];
 
 x[2] = 'c'; // 报错
-```
 
-上面示例中，变量 `x` 是一个只有两个成员的元组，如果对第三个成员赋值就报错了。
-
-但是，使用扩展运算符（`...`），可以表示不限成员数量的元组。
-
-```
+// 6. 使用扩展运算符 ...，可以表示不限成员数量的元组
 type NamedNums = [
   string,
-  ...number[]
+  ...number[] // 使用扩展运算符来展开一个数组从而实现了不定数量的成员
 ];
 
 const a:NamedNums = ['A', 1, 2];
 const b:NamedNums = ['B', 1, 2, 3];
-```
 
-上面示例中，元组类型 `NamedNums` 的第一个成员是字符串，后面的成员使用扩展运算符来展开一个数组，从而实现了不定数量的成员。
-
-扩展运算符（`...`）用在元组的任意位置都可以，它的后面只能是一个数组或元组。
-
-```
+// 扩展运算符... 用在元组的任意位置都可以，它的后面只能是一个数组或元组
 type t1 = [string, number, ...boolean[]];
 type t2 = [string, ...boolean[], number];
 type t3 = [...boolean[], string, number];
-```
 
-上面示例中，扩展运算符分别在元组的尾部、中部和头部，`...` 的后面是一个数组 `boolean[]`。
+// 如果不确定元组成员的类型和数量，可以写成这样
+type Tuple = [...any[]]; 
+// Tuple 可以放置任意数量和类型的成员，但失去了使用元组和TS的意义
 
-如果不确定元组成员的类型和数量，可以写成下面这样。
-
-```
-type Tuple = [...any[]];
-```
-
-上面示例中，元组 `Tuple` 可以放置任意数量和类型的成员。但是这样写，也就失去了使用元组和 TypeScript 的意义。
-
-元组的成员可以添加成员名，这个成员名是说明性的，可以任意取名，没有实际作用。
-
-```
+// 7. 元组的成员可以添加成员名，这个成员名是说明性的，可以任意取名，没有实际作用
 type Color = [
   red: number,
   green: number,
   blue: number
 ];
 
-const c:Color = [255, 255, 255];
-```
+const c: Color = [255, 255, 255];
 
-上面示例中，类型 `Color` 是一个元组，它有三个成员。每个成员都有一个名字，写在具体类型的前面，使用冒号分隔。这几个名字可以随便取，没有实际作用，只是用来说明每个成员的含义。
-
-元组可以通过方括号，读取成员类型。
-
-```
+// 8. 元组可以通过方括号，读取成员类型
 type Tuple = [string, number];
-type Age = Tuple[1]; // number
-```
+type Age = Tuple[1]; // number 返回 1 号元素的类型
 
-上面示例中，`Tuple[1]` 返回 1 号位置的成员类型。
-
-由于元组的成员都是数值索引，即索引类型都是 `number`，所以可以像下面这样读取。
-
-```
+// 9. 元组的成员都是数值索引，即索引类型都是number，所以可以像下面这样读取
 type Tuple = [string, number, Date];
 type TupleEl = Tuple[number];  // string|number|Date
+// Tuple[number] 表示元组 Tuple 所有数值索引的成员类型
+// 返回 string|number|Date 表示这个类型是三种值的联合类型
 ```
-
-上面示例中，`Tuple[number]` 表示元组 `Tuple` 的所有数值索引的成员类型，所以返回 `string|number|Date`，即这个类型是三种值的联合类型。
 
 ### 只读元组
 
-元组也可以是只读的，不允许修改，有两种写法。
-
-```
+```typescript
+// 1. 元组也可以是只读的，不允许修改，有两种写法
 // 写法一
 type t = readonly [number, string]
 
-// 写法二
-type t = Readonly<[number, string]>
-```
+// 写法二：使用了 工具泛型类 `Readonly<T>`
+type t = Readonly<[number, string]> 
 
-上面示例中，两种写法都可以得到只读元组，其中写法二是一个泛型，用到了工具类型 `Readonly<T>`。
-
-跟数组一样，只读元组是元组的父类型。所以，元组可以替代只读元组，而只读元组不能替代元组。
-
-```
+// 2. 只读元组是元组的父类型。元组可以替代只读元组，只读元组不能替代元组
 type t1 = readonly [number, number];
 type t2 = [number, number];
 
-let x:t2 = [1, 2];
-let y:t1 = x; // 正确
+let x: t2 = [1, 2];
+let y: t1 = x; // 正确
 
 x = y; // 报错
-```
 
-上面示例中，类型 `t1` 是只读元组，类型 `t2` 是普通元组。`t2` 类型可以赋值给 `t1` 类型，反过来就会报错。
-
-由于只读元组不能替代元组，所以会产生一些令人困惑的报错。
-
-```
-function distanceFromOrigin([x, y]:[number, number]) {
+// 只读元组不能替代元组，可能会令人困惑的报错
+function distanceFromOrigin([x, y]: [number, number]) {
   return Math.sqrt(x**2 + y**2);
 }
 
-let point = [3, 4] as const;
+let point = [3, 4] as const; 
+// 上面这种方式同时生成只读数组和只读元组
+// 它生成的实际上是一个只读的值类型 readonly [3, 4]，解读成只读数组或只读元组都可以
 
 distanceFromOrigin(point); // 报错
-```
 
-上面示例中，函数 `distanceFromOrigin()` 的参数是一个元组，传入只读元组就会报错，因为只读元组不能替代元组。
-
-读者可能注意到了，上例中 `[3, 4] as const` 的写法，在上一章讲到，生成的是只读数组，其实生成的同时也是只读元组。因为它生成的实际上是一个只读的 「值类型」`readonly [3, 4]`，把它解读成只读数组或只读元组都可以。
-
-上面示例报错的解决方法，就是使用类型断言，在最后一行将传入的参数断言为普通元组，详见《类型断言》一章。
-
-```
+// 解读办法：使用类型断言，将传入的参数断言为普通元组
 distanceFromOrigin(
   point as [number, number]
 )
@@ -1010,80 +940,65 @@ distanceFromOrigin(
 
 ### 成员数量的推断
 
-如果没有可选成员和扩展运算符，TypeScript 会推断出元组的成员数量（即元组长度）。
+```typescript
+// 1. 如果没有可选成员和扩展运算符，TypeScript 会推断出元组的成员数量（即元组长度）
 
-```
 function f(point: [number, number]) {
-  if (point.length === 3) {  // 报错
+  if (point.length === 3) {  // 报错 TS 发现元组 point 的长度为 2，不等于 3，这个判断没有意义
     // ...
   }
 }
-```
 
-上面示例会报错，原因是 TypeScript 发现元组 `point` 的长度是 `2`，不可能等于 `3`，这个判断无意义。
-
-如果包含了可选成员，TypeScript 会推断出可能的成员数量。
-
-```
+// 2. 如果包含了可选成员，TypeScript 会推断出可能的成员数量
 function f(
   point:[number, number?, number?]
 ) {
-  if (point.length === 4) {  // 报错
+  if (point.length === 4) {  // 报错，TS 推断 point.length 为 1|2|3，不可能为 4
     // ...
   }
 }
-```
 
-上面示例会报错，原因是 TypeScript 发现 `point.length` 的类型是 `1|2|3`，不可能等于 `4`。
-
-如果使用了扩展运算符，TypeScript 就无法推断出成员数量。
-
-```
+// 3. 使用了扩展运算符，TypeScript 就无法推断出成员数量
 const myTuple:[...string[]]
   = ['a', 'b', 'c'];
 
 if (myTuple.length === 4) { // 正确
   // ...
 }
+
+// 一旦扩展运算符使得元组的成员数量无法推断，TypeScript 内部就会把该元组当成数组处理
 ```
-
-上面示例中，`myTuple` 只有三个成员，但是 TypeScript 推断不出它的成员数量，因为它的类型用到了扩展运算符，TypeScript 把 `myTuple` 当成数组看待，而数组的成员数量是不确定的。
-
-一旦扩展运算符使得元组的成员数量无法推断，TypeScript 内部就会把该元组当成数组处理。
 
 ### 扩展运算符与成员数量
 
-扩展运算符（`...`）将数组（注意，不是元组）转换成一个逗号分隔的序列，这时 TypeScript 会认为这个序列的成员数量是不确定的，因为数组的成员数量是不确定的。
+扩展运算符（`...`）将数组转换成一个逗号分隔的序列，这时 TypeScript 会认为这个序列的成员数量是不确定的，因为数组的成员数量是不确定的。
 
 这导致如果函数调用时，使用扩展运算符传入函数参数，可能发生参数数量与数组长度不匹配的报错。
 
-```
+```typescript
 const arr = [1, 2];
 
-function add(x:number, y:number){
+function add(x: number, y: number){ 
   // ...
 }
 
+// 函数add()只能接受两个参数，但是传入的是...arr，TS认为转换后的参数个数是不确定的
 add(...arr) // 报错
 ```
 
-上面示例会报错，原因是函数 `add()` 只能接受两个参数，但是传入的是 `...arr`，TypeScript 认为转换后的参数个数是不确定的。
-
 有些函数可以接受任意数量的参数，这时使用扩展运算符就不会报错。
 
-```
+```typescript
 const arr = [1, 2, 3];
 console.log(...arr) // 正确
 ```
 
-上面示例中，`console.log()` 可以接受任意数量的参数，所以传入 `...arr` 就不会报错。
-
 解决这个问题的一个方法，就是把成员数量不确定的数组，写成成员数量确定的元组，再使用扩展运算符。
 
-```
+```typescript
 const arr:[number, number] = [1, 2];
 
-function add(x:number, y:number){
+function add(x: number, y: number){
   // ...
 }
 
@@ -1799,24 +1714,607 @@ const a:WithoutProperties = {prop: 1};
 
 ### 简介
 
-interface 是对象的模板，可以看作是一种类型约定。使用了某个模板的对象，就拥有了指定的类型结构。
+interface 是对象的模板，可以看作是一种<u>类型约定</u>。使用了某个接口的对象，就拥有了指定的类型结构。
 
 ```typescript
-// 定义了接口 Person，指定一个对象模板，拥有三个属性 firstName、lastName 和 age
-// 任何实现这个接口的对象，都必须拥有这三个属性，并且必须符合规定的类型
+// 1. 定义接口
+// 任何实现这个 Person 接口的对象，都必须拥有这三个属性，并且必须符合规定的类型
 interface Person {
   firstName: string;
   lastName: string;
   age: number;
 }
 
-// 实现该接口很简单，只要指定它作为对象的类型
-const p: Person = {
+// 指定接口作为对象的类型
+const p: Person = { // p 必须符合 Person 指定的结构
   firstName: 'John',
   lastName: 'Smith',
   age: 25
 };
+
+// 2. 方括号运算符可以取出 interface 某个属性的类型
+interface Foo {
+  a: string;
+}
+
+type A = Foo['a']; // string
 ```
+
+interface 可以表示对象的各种语法，它的成员有 5 种形式。
+
+- 对象属性
+- 对象的属性索引
+- 对象方法
+- 函数
+- 构造函数
+
+```typescript
+// 1. 对象属性
+interface Point {
+  x: number; // 指定对象属性类型，属性之间使用分号或逗号
+  y: number; // 最后一个属性结尾的分号或逗号可以省略
+}
+
+// 如果属性是可选的，就在属性名后面加一个问号
+interface Foo {
+  x?: string;
+}
+
+// 如果属性是只读的，需要加上 readonly 修饰符
+interface A {
+  readonly a: string;
+}
+
+// 2. 对象的属性索引
+interface A {
+  [prop: string]: number; // 属性名只要是字符串都符合要求
+}
+
+// 属性索引共有string、number和symbol三种类型
+// 一个接口中，最多只能定义一个字符串索引。
+// 字符串索引会约束该类型中所有名字为字符串的属性
+interface MyObj {
+  [prop: string]: number;
+
+  a: boolean;      // 编译错误
+}
+// 属性索引指定所有名称为字符串的属性，它们的属性值必须是数值（number）。
+// 属性a的值为布尔值就报错了
+
+// 属性的数值索引，其实是指定数组的类型
+interface A {
+  [prop: number]: string;
+}
+
+// [prop: number] 表示属性名的类型是数值，所以可以用数组对变量obj赋值
+const obj: A = ['a', 'b', 'c'];
+
+// 一个接口中最多只能定义一个数值索引。数值索引会约束所有名称为数值的属性
+
+// 如果一个 interface 同时定义了字符串索引和数值索引，那么数值索引必须服从于字符串索引
+// 因为在 JS 中，数值属性名最终是自动转换成字符串属性名
+interface A {
+  [prop: string]: number;
+  [prop: number]: string; // 报错
+}
+
+interface B {
+  [prop: string]: number;
+  [prop: number]: number; // 正确
+}
+
+// 数值索引的属性值类型与字符串索引不一致，就会报错。
+// 数值索引必须兼容字符串索引的类型声明。
+
+// 3. 对象的方法
+// 写法一
+interface A {
+  f(x: boolean): string;
+}
+
+// 写法二
+interface B {
+  f: (x: boolean) => string;
+}
+
+// 写法三
+interface C {
+  f: { (x: boolean): string };
+}
+
+// 属性名可以采用表达式，所以下面的写法也是可以的
+const f = 'f';
+
+interface A {
+  [f](x: boolean): string;
+}
+
+// 类型方法可以重载
+interface A {
+  f(): number;
+  f(x: boolean): boolean;
+  f(x: string, y: string): string;
+}
+
+// interface 里面的函数重载，不需要给出实现。但是，由于对象内部定义方法时，
+// 无法使用函数重载的语法，所以需要额外在对象外部给出函数方法的实现
+interface A {
+  f(): number;
+  f(x: boolean): boolean;
+  f(x: string, y: string): string;
+}
+
+function MyFunc(): number;
+function MyFunc(x: boolean): boolean;
+function MyFunc(x: string, y: string): string;
+function MyFunc(
+  x?:boolean|string, y?:string
+):number|boolean|string {
+  if (x === undefined && y === undefined) return 1;
+  if (typeof x === 'boolean' && y === undefined) return true;
+  if (typeof x === 'string' && typeof y === 'string') return 'hello';
+  throw new Error('wrong parameters');  
+}
+
+// 接口A的方法f()有函数重载，需要额外定义一个函数MyFunc()实现这个重载
+// 然后部署接口A的对象a的属性f等于函数MyFunc()就可以了
+const a:A = {
+  f: MyFunc
+}
+
+// 4. 函数
+// interface 也可以用来声明独立的函数
+interface Add { // 接口 Add 声明了一个函数类型
+  (x: number, y: number): number;
+}
+
+const myAdd: Add = (x, y) => x + y;
+
+// 5. 构造函数
+// interface 内部可以使用new关键字，表示构造函数
+interface ErrorConstructor {
+  new (message?: string): Error;
+}
+
+// 接口ErrorConstructor内部有new命令，表示它是一个构造函数
+// 构造函数特指具有 constructor 属性的类中的构造函数
+```
+
+### 接口的继承
+
+#### 接口继承接口
+
+```typescript
+// 1. interface 可以使用extends关键字，继承其他 interface
+interface Shape {
+  name: string;
+}
+
+// Circle继承了Shape，所以Circle其实有两个属性name和radius。
+// 这时，Circle是子接口，Shape是父接口
+interface Circle extends Shape {
+  radius: number;
+}
+
+// extends关键字会从继承的接口里面拷贝属性类型，这样就不必书写重复的属性
+
+// 2. interface 允许多重继承
+interface Style {
+  color: string;
+}
+
+interface Shape {
+  name: string;
+}
+
+// 多重接口继承，实际上相当于多个父接口的合并
+interface Circle extends Style, Shape {
+  radius: number;
+}
+
+// 3. 如果子接口与父接口存在同名属性，那么子接口的属性会覆盖父接口的属性。
+// 注意，子接口与父接口的同名属性必须是类型兼容的，不能有冲突，否则会报错
+interface Foo {
+  id: string;
+}
+
+interface Bar extends Foo {
+  id: number; // id 类型不兼容，报错
+}
+
+// 4. 多重继承时，如果多个父接口存在同名属性，那么这些同名属性不能有类型冲突，
+// 否则会报错
+interface Foo {
+  id: string;
+}
+
+interface Bar {
+  id: number;
+}
+
+// 报错，Foo 和 Bar 的 id 属性类型冲突
+interface Baz extends Foo, Bar {
+  type: string;
+}
+
+```
+
+#### 接口继承 type
+
+```typescript
+// 1. interface 可以继承type命令定义的对象类型
+type Country = {
+  name: string;
+  capital: string;
+}
+
+// 继承了 Country 并新增了 population 属性
+interface CountryWithPop extends Country {
+  population: number;
+}
+
+// 如果type命令定义的类型不是对象，interface 就无法继承
+```
+
+#### 接口继承 class
+
+```typescript
+// 1. interface 还可以继承 class，即继承该类的所有成员
+class A {
+  x: string = '';
+
+  y(): boolean {
+    return true;
+  }
+}
+
+// B继承了A，因此B就具有属性x、y()和z
+interface B extends A {
+  z: number
+}
+
+// 实现B接口的对象就需要实现这些属性
+const b: B = {
+  x: '',
+  y: function(){ return true },
+  z: 123
+}
+
+// 某些类拥有私有成员和保护成员，interface 可以继承这样的类，但是意义不大
+class A {
+  private x: string = '';
+  protected y: string = '';
+}
+
+interface B extends A {
+  z: number
+}
+
+// 报错
+const b: B = { /* ... */ }
+
+// 报错
+class C implements B {
+  // ...
+}
+```
+
+### 接口合并
+
+```typescript
+// 多个同名接口会合并成一个接口
+interface Box {
+  height: number;
+  width: number;
+}
+
+interface Box {
+  length: number;
+}
+// 两个Box接口会合并成一个接口，同时有height、width和length三个属性
+```
+
+这样的设计主要是为了兼容 JavaScript 的行为。JavaScript 开发者常常对全局对象或者外部库，添加自己的属性和方法。那么，只要使用 interface 给出这些自定义属性和方法的类型，就能自动跟原始的 interface 合并，使得扩展外部类型非常方便。
+
+举例来说，Web 网页开发经常会对`window`对象和`document`对象添加自定义属性，但是 TypeScript 会报错，因为原始定义没有这些属性。解决方法就是把自定义属性写成 interface，合并进原始定义。
+
+```
+interface Document {
+  foo: string;
+}
+
+document.foo = 'hello';
+```
+
+上面示例中，接口`Document`增加了一个自定义属性`foo`，从而就可以在`document`对象上使用自定义属性。
+
+同名接口合并时，同一个属性如果有多个类型声明，彼此不能有类型冲突。
+
+```
+interface A {
+  a: number;
+}
+
+interface A {
+  a: string; // 报错
+}
+```
+
+上面示例中，接口`A`的属性`a`有两个类型声明，彼此是冲突的，导致报错。
+
+同名接口合并时，如果同名方法有不同的类型声明，那么会发生函数重载。而且，后面的定义比前面的定义具有更高的优先级。
+
+```
+interface Cloner {
+  clone(animal: Animal): Animal;
+}
+
+interface Cloner {
+  clone(animal: Sheep): Sheep;
+}
+
+interface Cloner {
+  clone(animal: Dog): Dog;
+  clone(animal: Cat): Cat;
+}
+
+// 等同于
+interface Cloner {
+  clone(animal: Dog): Dog;
+  clone(animal: Cat): Cat;
+  clone(animal: Sheep): Sheep;
+  clone(animal: Animal): Animal;
+}
+```
+
+上面示例中，`clone()`方法有不同的类型声明，会发生函数重载。这时，越靠后的定义，优先级越高，排在函数重载的越前面。比如，`clone(animal: Animal)`是最先出现的类型声明，就排在函数重载的最后，属于`clone()`函数最后匹配的类型。
+
+这个规则有一个例外。同名方法之中，如果有一个参数是字面量类型，字面量类型有更高的优先级。
+
+```
+interface A {
+  f(x:'foo'): boolean;
+}
+
+interface A {
+  f(x:any): void;
+}
+
+// 等同于
+interface A {
+  f(x:'foo'): boolean;
+  f(x:any): void;
+}
+```
+
+上面示例中，`f()`方法有一个类型声明的参数`x`是字面量类型，这个类型声明的优先级最高，会排在函数重载的最前面。
+
+一个实际的例子是 Document 对象的`createElement()`方法，它会根据参数的不同，而生成不同的 HTML 节点对象。
+
+```
+interface Document {
+  createElement(tagName: any): Element;
+}
+interface Document {
+  createElement(tagName: "div"): HTMLDivElement;
+  createElement(tagName: "span"): HTMLSpanElement;
+}
+interface Document {
+  createElement(tagName: string): HTMLElement;
+  createElement(tagName: "canvas"): HTMLCanvasElement;
+}
+
+// 等同于
+interface Document {
+  createElement(tagName: "canvas"): HTMLCanvasElement;
+  createElement(tagName: "div"): HTMLDivElement;
+  createElement(tagName: "span"): HTMLSpanElement;
+  createElement(tagName: string): HTMLElement;
+  createElement(tagName: any): Element;
+}
+```
+
+上面示例中，`createElement()`方法的函数重载，参数为字面量的类型声明会排到最前面，返回具体的 HTML 节点对象。类型越不具体的参数，排在越后面，返回通用的 HTML 节点对象。
+
+如果两个 interface 组成的联合类型存在同名属性，那么该属性的类型也是联合类型。
+
+```
+interface Circle {
+  area: bigint;
+}
+
+interface Rectangle {
+  area: number;
+}
+
+declare const s: Circle | Rectangle;
+
+s.area;   // bigint | number
+```
+
+上面示例中，接口`Circle`和`Rectangle`组成一个联合类型`Circle | Rectangle`。因此，这个联合类型的同名属性`area`，也是一个联合类型。本例中的`declare`命令表示变量`s`的具体定义，由其他脚本文件给出，详见《declare 命令》一章。
+
+### interface 和 type 的异同
+
+`interface`命令与`type`命令作用类似，都可以表示对象类型。
+
+很多对象类型既可以用 interface 表示，也可以用 type 表示。而且，两者往往可以换用，几乎所有的 interface 命令都可以改写为 type 命令。
+
+它们的相似之处，首先表现在都能为对象类型起名。
+
+```
+type Country = {
+  name: string;
+  capital: string;
+}
+
+interface Country {
+  name: string;
+  capital: string;
+}
+```
+
+上面示例是`type`命令和`interface`命令，分别定义同一个类型。
+
+`class`命令也有类似作用，通过定义一个类，同时定义一个对象类型。但是，它会创造一个值，编译后依然存在。如果只是单纯想要一个类型，应该使用`type`或`interface`。
+
+interface 与 type 的区别有下面几点。
+
+（1）`type`能够表示非对象类型，而`interface`只能表示对象类型（包括数组、函数等）。
+
+（2）`interface`可以继承其他类型，`type`不支持继承。
+
+继承的主要作用是添加属性，`type`定义的对象类型如果想要添加属性，只能使用`&`运算符，重新定义一个类型。
+
+```
+type Animal = {
+  name: string
+}
+
+type Bear = Animal & {
+  honey: boolean
+}
+```
+
+上面示例中，类型`Bear`在`Animal`的基础上添加了一个属性`honey`。
+
+上例的`&`运算符，表示同时具备两个类型的特征，因此可以起到两个对象类型合并的作用。
+
+作为比较，`interface`添加属性，采用的是继承的写法。
+
+```
+interface Animal {
+  name: string
+}
+
+interface Bear extends Animal {
+  honey: boolean
+}
+```
+
+继承时，type 和 interface 是可以换用的。interface 可以继承 type。
+
+```
+type Foo = { x: number; };
+
+interface Bar extends Foo {
+  y: number;
+}
+```
+
+type 也可以继承 interface。
+
+```
+interface Foo {
+  x: number;
+}
+
+type Bar = Foo & { y: number; };
+```
+
+（3）同名`interface`会自动合并，同名`type`则会报错。也就是说，TypeScript 不允许使用`type`多次定义同一个类型。
+
+```
+type A = { foo:number }; // 报错
+type A = { bar:number }; // 报错
+```
+
+上面示例中，`type`两次定义了类型`A`，导致两行都会报错。
+
+作为比较，`interface`则会自动合并。
+
+```
+interface A { foo:number };
+interface A { bar:number };
+
+const obj:A = {
+  foo: 1,
+  bar: 1
+};
+```
+
+上面示例中，`interface`把类型`A`的两个定义合并在一起。
+
+这表明，interface 是开放的，可以添加属性，type 是封闭的，不能添加属性，只能定义新的 type。
+
+（4）`interface`不能包含属性映射（mapping），`type`可以，详见《映射》一章。
+
+```
+interface Point {
+  x: number;
+  y: number;
+}
+
+// 正确
+type PointCopy1 = {
+  [Key in keyof Point]: Point[Key];
+};
+
+// 报错
+interface PointCopy2 {
+  [Key in keyof Point]: Point[Key];
+};
+```
+
+（5）`this`关键字只能用于`interface`。
+
+```
+// 正确
+interface Foo {
+  add(num:number): this;
+};
+
+// 报错
+type Foo = {
+  add(num:number): this;
+};
+```
+
+上面示例中，type 命令声明的方法`add()`，返回`this`就报错了。interface 命令没有这个问题。
+
+下面是返回`this`的实际对象的例子。
+
+```
+class Calculator implements Foo {
+  result = 0;
+  add(num:number) {
+    this.result += num;
+    return this;
+  }
+}
+```
+
+（6）type 可以扩展原始数据类型，interface 不行。
+
+```
+// 正确
+type MyStr = string & {
+  type: 'new'
+};
+
+// 报错
+interface MyStr extends string {
+  type: 'new'
+}
+```
+
+上面示例中，type 可以扩展原始数据类型 string，interface 就不行。
+
+（7）`interface`无法表达某些复杂类型（比如交叉类型和联合类型），但是`type`可以。
+
+```
+type A = { /* ... */ };
+type B = { /* ... */ };
+
+type AorB = A | B;
+type AorBwithName = AorB & {
+  name: string
+};
+```
+
+上面示例中，类型`AorB`是一个联合类型，`AorBwithName`则是为`AorB`添加一个属性。这两种运算，`interface`都没法表达。
+
+综上所述，如果有复杂的类型运算，那么没有其他选择只能使用`type`；一般情况下，`interface`灵活性比较高，便于扩充类型或自动合并，建议优先使用。
 
 ## 10. 类
 
@@ -1824,26 +2322,26 @@ const p: Person = {
 
 ## 12. Enum
 
-## 类型断言
+## 13. 类型断言
 
-## 模块
+## 14. 模块
 
-## namespace
+## 15. namespace
 
-## 装饰器
+## 16. 装饰器
 
-## declare 关键字
+## 17. declare 关键字
 
-## d.ts 类型声明文件
+## 18. d.ts 类型声明文件
 
-## 类型运算符
+## 19. 类型运算符
 
-## 类型映射
+## 20. 类型映射
 
-## 类型工具
+## 21. 类型工具
 
-## 注释指令
+## 22. 注释指令
 
-## tsconfig.json 文件
+## 23. tsconfig.json 文件
 
-## tsc 命令
+## 24. tsc 命令

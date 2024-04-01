@@ -1,0 +1,69 @@
+---
+title: 深入浅出 React 组件的组合
+date: 2023-11-09
+lastmod: 2023-11-06
+tags: ['React', 'Frontend']
+draft: false
+summary: 详解 React 中组件组合的概念，以及组件组合的正确使用方式
+---
+
+<TOCInline toc={props.toc} exclude="Introduction" />
+
+组件组合（Component composition）在 React 开发中非常重要，因为它可以实现组件的高度可复用，并帮解决 Prop drilling 的问题，并且可以用一种更好方式来组织应用的布局。
+
+---
+
+## 什么是组件组合？
+
+为了讨论组件组合，我们首先来看看当直接在一个组件的 JSX 中使用或嵌套另一个组件时会发生什么。假设我们有一个想要复用的 `Modal` 组件，同时我们还拥有一个 `Success` 消息组件。如下图所示：
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/component-composition1.png)
+</div>
+
+如上图左边所示，直接在 `Modal` 组件内使用 `Success` 组件，我们通常就是这样直接将一个组件在另一个组件中使用，对吧？然而，当考虑到组件的可重用性时，这会造成一个很大的问题。直接将 `Success` 组件嵌套在 `Modal` 组件内，这就将两个组件深度地绑定（耦合）在了一起，无论在什么地方使用 `Modal` 组件，其内部总是会包含这个 `Success` 组件，这个 `Modal` 组件也只能展示 `Success` 组件内部的内容，假设我们还有一个 `Error` 组件，那么我们就无法使用这个 `Modal` 组件来展示 `Error` 组件，我们必须为这个 `Error` 组件创建一个新的 `ErrorModal` 的组件，后续我们如果还需要一个 `Warn` 组件来展示警告消息，岂不是还要为其创建一个 `WarnModal` 组件，每当我们需要一个不同的消息组件，我们都要为其创建一个专属的 `XxxModal` 组件，这会导致开发效率低下，并且代码臃肿、难以维护。
+
+众所周知，软件开发中中的一个重要原则就是 「高内聚，低耦合」。在这里 `Modal` 和 `Success` 进行了强耦合，怎么解决强耦合造成的不可复用的问题呢？那就是通过组件组合的方式。下面我们就来看看如何使用组件组合实现组件之间可复用、低耦合的效果。
+
+如上图右边所示，`Modal` 组件现在接收一个 `children` prop，并且在其 JSX 中通过 `{}` 去包含这个 `children` prop，而不再包含预定义的 `Success` 组件。我们只需要在使用 `Modal` 组件时，在其开始标签（Start tag）和结束标签（End tag）之间嵌套 `Success` 组件，就像我们在 HTML 中进行标签嵌套的那样，这样 React 会将 `Success` 组件作为 `children` prop 传递给 `Modal` 组件。
+
+```jsx
+<Modal>
+  <Success />
+<Modal>
+```
+
+让我们来仔细对比以下上图中左右两边的不同。在左边我们将 `Success` 组件绑定到了 `Modal` 组件。所以这个 `Modal` 组件也可以称之为 `SuccessModal` 组件。但在右边，我们通过组件组合，将 `Success` 组件传入到 `Modal` 组件，通过这种方式来组合它们（得益于 `children` prop）。
+
+现在我们可以传入任何其它组件，这使得 `Modal` 组件高度可重用。本质上，当我们进行组件组合时，我们就相当于在 `Modal` 组件内留下了一个空位或者说插槽（没错，如果你熟悉 Vue，这就相当于 Vue 中的插槽）。这个插槽随时等待着我们想要的任何其它组件来进行填充。
+
+<div className="overflow-hidden">
+  ![react-custome-hooks-chosen-flow](/static/images/react/component-composition2.png)
+</div>
+
+比如说，如果后来我们在应用的其他地方需要另一个 `Modal` 窗口，但这次是渲染错误消息（如上图所示）。我们再次使用 `Modal` 组件，但这次我们传入 `Error` 组件作为子组件。
+
+```jsx
+<Modal>
+  <Error />
+<Modal>
+```
+
+现在我们将 `Modal` 和 `Error` 组件组合在一起了。
+
+现在我们就可以得出结论：组件组合就是通过使用 `children` prop 或明确地将组件定义为 props 来结合不同组件的技术。
+
+---
+
+## 组件组合的应用场景
+
+我们通常有两个重要的原因或两种情况使用组件组合。
+
+1. 创建高度可重用和灵活的组件，如模态框
+2. 使用组件组合解决诸如 prop drilling 的问题（prop drilling 是指 prop 通过组件树的多层中间组件进行传递，以达到需要这个这个 prop 的组件，即使这些中间组件不需要这个 prop），使用组件组合来实现更合理的布局，通过组件组合，我们可以一眼识别出整个 UI 的布局
+
+## 扩展阅读
+
+- [React Component Composition](https://www.robinwieruch.de/react-component-composition/)
+- [The Future of React: Enhancing Components through Composition Pattern](https://dev.to/ricardolmsilva/composition-pattern-in-react-28mj)
+- [React components composition: how to get it right](https://dev.to/adevnadia/react-components-composition-how-to-get-it-right-4mgn)

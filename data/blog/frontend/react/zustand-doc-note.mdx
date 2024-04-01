@@ -1,0 +1,2737 @@
+---
+title: Zustand 官方文档量子速读版
+date: 2024-03-24
+lastmod: 2024-03-24
+tags: ['React', 'Frontend', '量子速读']
+draft: false
+summary: Zustand 官方文档精简版，快速掌握 Zustand
+---
+
+文档地址：[Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction)
+
+<div class="flex justify-center mb-4">
+  <img src="https://github.com/pmndrs/zustand/raw/main/bear.jpg" />
+</div>
+---
+
+# 介绍
+
+小巧、快速、可扩展的状态管理解决方案。 Zustand 拥有基于 hooks 的 API。
+
+Zustand 处理了很多常见的陷阱（pitfalls），比如 [僵尸孩子问题（zombie child problem）](https://react-redux.js.org/api/hooks#stale-props-and-zombie-children)， [React 并发](https://github.com/bvaughn/rfcs/blob/useMutableSource/text/0000-use-mutable-source.md) 和在混合渲染器（mixed renderers）之间的 [上下文丢失（context loss）](https://github.com/facebook/react/issues/13332) 。
+
+[示例](https://codesandbox.io/s/dazzling-moon-itop4)
+
+## 安装 Zustand
+
+```
+npm install zustand
+```
+
+## 首先创建一个 store
+
+store 是一个 hook！store 内可以存放任何东西：原始类型（primitives）、对象、函数。 `set` 函数会合并（merge）  state。
+
+```tsx:App.jsx
+import { create } from 'zustand'
+
+const useStore = create(set => ({
+  bears: 0,
+  increasePopulation: () => set(state => ({ bears: state.bears + 1 })),
+  removeAllBears: () => set({ bears: 0 }),
+  updateBears: newBears => set({ bears: newBears }),
+}));
+```
+
+## 然后绑定组件
+
+可以在任何地方使用这个 hook，不需要 provider。 选择你的 state，消费组件（consuming component）在 state 发生变化时会进行重新渲染。
+
+```tsx:App.jsx
+function BearCounter() {
+  const bears = useStore(state => state.bears)
+  return <h1>{bears} around here...</h1>
+}
+
+function Controls() {
+  const increasePopulation = useStore(state => state.increasePopulation)
+  return <button onClick={increasePopulation}>one up</button>
+}
+
+function App() {
+  return (
+    <div>
+      <BearCounter />
+      <Controls />
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
+
+# 比较
+
+## Redux
+
+### state 模型（与 Redux 比较）
+
+从概念上讲，Zustand 和 Redux 非常相似，都是基于不可变 state 模型的。然而，Redux 要求你的应用被包裹在上下文 Provider 中；Zustand 则不需要。
+
+**Zustand**
+
+```ts
+import { create } from 'zustand'
+
+type State = {
+  count: number
+}
+
+type Actions = {
+  increment: (qty: number) => void
+  decrement: (qty: number) => void
+}
+
+const useCountStore = create<State & Actions>((set) => ({
+  count: 0,
+  increment: (qty: number) => set((state) => ({ count: state.count + qty })),
+  decrement: (qty: number) => set((state) => ({ count: state.count - qty })),
+}))
+import { create } from 'zustand'
+
+type State = {
+  count: number
+}
+
+type Actions = {
+  increment: (qty: number) => void
+  decrement: (qty: number) => void
+}
+
+type Action = {
+  type: keyof Actions
+  qty: number
+}
+
+const countReducer = (state: State, action: Action) => {
+  switch (action.type) {
+    case 'increment':
+      return { count: state.count + action.qty }
+    case 'decrement':
+      return { count: state.count - action.qty }
+    default:
+      return state
+  }
+}
+
+const useCountStore = create<State & Actions>((set) => ({
+  count: 0,
+  dispatch: (action: Action) => set((state) => countReducer(state, action)),
+}))
+```
+
+**Redux**
+
+```ts
+import { createStore } from 'redux'
+import { useSelector, useDispatch } from 'react-redux'
+
+type State = {
+  count: number
+}
+
+type Action = {
+  type: 'increment' | 'decrement'
+  qty: number
+}
+
+const countReducer = (state: State, action: Action) => {
+  switch (action.type) {
+    case 'increment':
+      return { count: state.count + action.qty }
+    case 'decrement':
+      return { count: state.count - action.qty }
+    default:
+      return state
+  }
+}
+
+const countStore = createStore(countReducer)
+import { createSlice, configureStore } from '@reduxjs/toolkit'
+
+const countSlice = createSlice({
+  name: 'count',
+  initialState: { value: 0 },
+  reducers: {
+    incremented: (state, qty: number) => {
+      // Redux Toolkit does not mutate the state, it uses the Immer library
+      // behind scenes, allowing us to have something called "draft state".
+      state.value += qty
+    },
+    decremented: (state, qty: number) => {
+      state.value -= qty
+    },
+  },
+})
+
+const countStore = configureStore({ reducer: countSlice.reducer })
+```
+
+### 渲染优化 (vs Redux)
+
+在应用中进行渲染优化时，Zustand 和 Redux 之间没有主要的方法差异。在这两个库中，都推荐你通过使用选择器手动使用渲染优化。
+
+**Zustand**
+
+```ts
+import { create } from 'zustand'
+
+type State = {
+  count: number
+}
+
+type Actions = {
+  increment: (qty: number) => void
+  decrement: (qty: number) => void
+}
+
+const useCountStore = create<State & Actions>((set) => ({
+  count: 0,
+  increment: (qty: number) => set((state) => ({ count: state.count + qty })),
+  decrement: (qty: number) => set((state) => ({ count: state.count - qty })),
+}))
+
+const Component = () => {
+  const count = useCountStore((state) => state.count)
+  const increment = useCountStore((state) => state.increment)
+  const decrement = useCountStore((state) => state.decrement)
+  // ...
+}
+```
+
+**Redux**
+
+```ts
+import { createStore } from 'redux'
+import { useSelector, useDispatch } from 'react-redux'
+
+type State = {
+  count: number
+}
+
+type Action = {
+  type: 'increment' | 'decrement'
+  qty: number
+}
+
+const countReducer = (state: State, action: Action) => {
+  switch (action.type) {
+    case 'increment':
+      return { count: state.count + action.qty }
+    case 'decrement':
+      return { count: state.count - action.qty }
+    default:
+      return state
+  }
+}
+
+const countStore = createStore(countReducer)
+
+const Component = () => {
+  const count = useSelector((state) => state.count)
+  const dispatch = useDispatch()
+  // ...
+}
+import { useSelector } from 'react-redux'
+import type { TypedUseSelectorHook } from 'react-redux'
+import { createSlice, configureStore } from '@reduxjs/toolkit'
+
+const countSlice = createSlice({
+  name: 'count',
+  initialState: { value: 0 },
+  reducers: {
+    incremented: (state, qty: number) => {
+      // Redux Toolkit does not mutate the state, it uses the Immer library
+      // behind scenes, allowing us to have something called "draft state".
+      state.value += qty
+    },
+    decremented: (state, qty: number) => {
+      state.value -= qty
+    },
+  },
+})
+
+const countStore = configureStore({ reducer: countSlice.reducer })
+
+const useAppSelector: TypedUseSelectorHook<typeof countStore.getState> =
+  useSelector
+
+const useAppDispatch: () => typeof countStore.dispatch = useDispatch
+
+const Component = () => {
+  const count = useAppSelector((state) => state.count.value)
+  const dispatch = useAppDispatch()
+  // ...
+}
+```
+
+---
+
+# 更新 state
+
+## 浅层更新
+
+使用 Zustand 更新 state 非常简单！调用提供的 `set` 函数并传入新 state，它将与 store 中现有的 state 进行浅层合并（shallowly merged）。
+
+```tsx
+import { create } from 'zustand'
+
+type State = {
+  firstName: string
+  lastName: string
+}
+
+type Action = {
+  updateFirstName: (firstName: State['firstName']) => void
+  updateLastName: (lastName: State['lastName']) => void
+}
+
+// 创建你的 store ，包括 state 和（可选的）动作
+const usePersonStore = create<State & Action>((set) => ({
+  firstName: '',
+  lastName: '',
+  updateFirstName: (firstName) => set(() => ({ firstName: firstName })),
+  updateLastName: (lastName) => set(() => ({ lastName: lastName })),
+}))
+
+// In consuming app
+function App() {
+  // "选择" 所需的 state 和动作，这里的例子是 firstName 值
+  // 以及 updateFirstName 动作
+  const firstName = usePersonStore((state) => state.firstName)
+  const updateFirstName = usePersonStore((state) => state.updateFirstName)
+
+  return (
+    <main>
+      <label>
+        First name
+        <input
+          // 更新 "firstName"  state 
+          onChange={(e) => updateFirstName(e.currentTarget.value)}
+          value={firstName}
+        />
+      </label>
+
+      <p>
+        Hello, <strong>{firstName}!</strong>
+      </p>
+    </main>
+  )
+}
+```
+
+## 深层嵌套对象更新
+
+如果有一个像这样的深层 state 对象：
+
+```ts
+type State = {
+  deep: {
+    nested: {
+      obj: { count: number }
+    }
+  }
+}
+```
+
+更新嵌套 state 对象需要确保更新过程是以不可变的方式完成的。
+
+### 常规方法
+
+类似于 React 或 Redux，常规方法是复制 state 对象的每个层级。 这是通过展开 action 符 `...` 来完成的，并通过手动将其与新 state 值合并。 如下所示：
+
+```ts
+  normalInc: () =>
+    set((state) => ({
+      deep: {
+        ...state.deep,
+        nested: {
+          ...state.deep.nested,
+          obj: {
+            ...state.deep.nested.obj,
+            count: state.deep.nested.obj.count + 1
+          }
+        }
+      }
+    })),
+```
+
+这非常冗长！让我们探索一些可以让你生活更轻松的替代方案。
+
+### 使用 Immer
+
+许多人使用 [Immer](https://github.com/immerjs/immer) 来更新嵌套值。 Immer 可以在你需要更新嵌套 state 的时候使用，比如在 React、Redux，当然还有 Zustand！
+
+你可以使用 Immer 来简化深层嵌套对象的 state 更新。让我们来看看一个例子：
+
+```ts
+  immerInc: () =>
+    set(produce((state: State) => { ++state.deep.nested.obj.count })),
+```
+
+多么简洁！请注意这里列出的[注意事项](https://kimi.moonshot.cn/integrations/immer-middleware.md)。
+
+### 使用 optics-ts
+
+另一个选择是使用 [optics-ts](https://github.com/akheron/optics-ts/)：
+
+```ts
+  opticsInc: () =>
+    set(O.modify(O.optic<State>().path("deep.nested.obj.count"))((c) => c + 1)),
+```
+
+Unlike Immer, optics-ts doesn't use proxies or mutation syntax.
+
+与Immer不同，optics-ts不使用代理（proxy）或修改（mutation）语法。
+
+### 使用 Ramda
+
+也可以使用[Ramda](https://ramdajs.com/)：
+
+```ts
+  ramdaInc: () =>
+    set(R.over(R.lensPath(["deep", "nested", "obj", "count"]), (c) => c + 1)),
+```
+
+Ramda 和 optics-ts 也都支持类型。
+
+### CodeSandbox Demo
+
+https://codesandbox.io/s/zustand-normal-immer-optics-ramda-updating-ynn3o?file=/src/App.tsx
+
+---
+# 不可变 state 和合并
+
+就像 React 的 `useState` 一样，我们需要以不可变的方式更新 state 。
+
+这里有一个典型的例子：
+
+```jsx
+import { create } from 'zustand'
+
+const useCountStore = create((set) => ({
+  count: 0,
+  inc: () => set((state) => ({ count: state.count + 1 })),
+}))
+```
+
+`set` 函数用于更新 store 中的 state 。
+由于 state 是不可变的，它应该是这样的：
+
+```js
+set((state) => ({ ...state, count: state.count + 1 }))
+```
+
+然而，由于这是一个常见的模式，`set` 实际上会合并 state ，
+可以省略 `...state` 部分：
+
+```js
+set((state) => ({ count: state.count + 1 }))
+```
+
+## 嵌套对象
+
+`set` 函数只在一级深度上合并 state 。
+如果你有一个嵌套对象，你需要显式地合并它们。你会使用像这样的展开 action 符模式：
+
+```jsx
+import { create } from 'zustand'
+
+const useCountStore = create((set) => ({
+  nested: { count: 0 },
+  inc: () =>
+    set((state) => ({
+      nested: { ...state.nested, count: state.nested.count + 1 },
+    })),
+}))
+```
+
+对于复杂的用例，考虑使用一些帮助处理不可变更新的库。
+你可以参考 [更新嵌套 state 对象的值](./updating-state.md#deeply-nested-object)。
+
+## 替换标志
+
+要禁用合并行为，你可以为 `set` 指定一个 `replace` 布尔值，如下所示：
+
+```js
+set((state) => newState, true)
+```
+
+---
+# Flux 启发式实践
+
+虽然Zustand是一个观点中立（unopinionated ）的库，但我们确实推荐一些模式。这些模式受到最初在 [Flux](https://github.com/facebookarchive/flux) 中发现的实践的启发，以及最近的[Redux](https://redux.js.org/understanding/thinking-in-redux/three-principles)，所以如果你来自另一个库，你应该会感到宾至如归。
+
+然而，Zustand在一些基本方面有所不同，因此一些术语可能不会完全与其他库对齐。
+
+## 推荐模式
+
+### 单一 store 
+
+你应用的全局 state 应该位于一个单一的 Zustand store 中。
+
+如果你有一个大型应用程序，Zustand支持 [将 store 分割成 slice](https://docs.pmnd.rs/zustand/guides/slices-pattern)。
+
+### 使用 `set` / `setState` 更新 store 
+
+始终使用 `set`（或 `setState`）来更新你的 store 。`set`（和 `setState`）确保所描述的更新被正确合并，且 listners 得到合适的通知。
+
+### 将 store 的 action 放在一起
+
+在 Zustand 中， state 可以在不使用其他 Flux 库中发现的 dispatch  action 和 reducer 的情况下进行更新。这些 store  action 可以直接添加到 store 中，如下所示。
+
+可选地，通过使用 `setState`，它们可以[位于 store 外部](https://docs.pmnd.rs/zustand/guides/practice-with-no-store-actions)。
+
+```js
+const useBoundStore = create((set) => ({
+  storeSliceA: ...,
+  storeSliceB: ...,
+  storeSliceC: ...,
+  updateX: () => set(...),
+  updateY: () => set(...),
+}))
+```
+
+### Redux 模式
+
+如果你离不开 Redux 风格的 reducer，你可以在 store 的根级别定义一个 `dispatch` 函数：
+
+```typescript
+const types = { increase: 'INCREASE', decrease: 'DECREASE' }
+
+const reducer = (state, { type, by = 1 }) => {
+  switch (type) {
+    case types.increase:
+      return { grumpiness: state.grumpiness + by }
+    case types.decrease:
+      return { grumpiness: state.grumpiness - by }
+  }
+}
+
+const useGrumpyStore = create((set) => ({
+  grumpiness: 0,
+  dispatch: (args) => set((state) => reducer(state, args)),
+}));
+
+const dispatch = useGrumpyStore((state) => state.dispatch)
+dispatch({ type: types.increase, by: 2 })
+```
+
+你也可以使用我们的 redux-middleware。它连接你的主 reduer，设置初始 state ，并在 state 本身和纯 API 中添加一个 dispatch 函数。
+
+```typescript
+import { redux } from 'zustand/middleware'
+
+const useReduxStore = create(redux(reducer, initialState))
+```
+
+更新 store 的另一种方式是通过封装 state 函数的函数。这些也可以处理 action 的副作用。例如，通过HTTP调用。要以非反应式方式使用Zustand，请参见 [README 文件](https://github.com/pmndrs/zustand#readingwriting-state-and-reacting-to-changes-outside-of-components)。
+
+# 自动生成选择器
+
+我们建议在使用 store 中的属性或 action 时使用选择器。您可以像这样从 store 中访问值：
+
+```typescript
+const bears = useBearStore((state) => state.bears)
+```
+
+然而，编写这些选择器可能会很繁琐。如果这对您来说是个问题，您可以自动生成选择器。
+
+## 创建以下函数：`createSelectors`
+
+```typescript
+import { StoreApi, UseBoundStore } from 'zustand'
+
+type WithSelectors<S> = S extends { getState: () => infer T }
+  ? S & { use: { [K in keyof T]: () => T[K] } }
+  : never
+
+const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
+  _store: S,
+) => {
+  let store = _store as WithSelectors<typeof _store>
+  store.use = {}
+  for (let k of Object.keys(store.getState())) {
+    ;(store.use as any)[k] = () => store((s) => s[k as keyof typeof s])
+  }
+
+  return store
+}
+```
+
+如果您有一个像这样的 store ：
+
+```typescript
+interface BearState {
+  bears: number
+  increase: (by: number) => void
+  increment: () => void
+}
+
+const useBearStoreBase = create<BearState>()((set) => ({
+  bears: 0,
+  increase: (by) => set((state) => ({ bears: state.bears + by })),
+  increment: () => set((state) => ({ bears: state.bears + 1 })),
+}))
+```
+
+将该函数应用于您的 store ：
+
+```typescript
+const useBearStore = createSelectors(useBearStoreBase)
+```
+
+现在选择器已经自动生成，您可以直接访问它们：
+
+```typescript
+// get the property
+const bears = useBearStore.use.bears()
+
+// get the action
+const increment = useBearStore.use.increment()
+```
+
+## Vanilla Store
+
+如果您正在使用 Vanilla Store，请使用以下 `createSelectors` 函数：
+
+```typescript
+import { StoreApi, useStore } from 'zustand'
+
+type WithSelectors<S> = S extends { getState: () => infer T }
+  ? S & { use: { [K in keyof T]: () => T[K] } }
+  : never
+
+const createSelectors = <S extends StoreApi<object>>(_store: S) => {
+  const store = _store as WithSelectors<typeof _store>
+  store.use = {}
+  for (const k of Object.keys(store.getState())) {
+    ;(store.use as any)[k] = () =>
+      useStore(_store, (s) => s[k as keyof typeof s])
+  }
+
+  return store
+}
+```
+
+使用方式与 React store 相同。如果您有一个像这样的 store ：
+
+```typescript
+import { createStore } from 'zustand'
+
+interface BearState {
+  bears: number
+  increase: (by: number) => void
+  increment: () => void
+}
+
+const store = createStore<BearState>((set) => ({
+  bears: 0,
+  increase: (by) => set((state) => ({ bears: state.bears + by })),
+  increment: () => set((state) => ({ bears: state.bears + 1 })),
+}))
+```
+
+将该函数应用于您的 store ：
+
+```typescript
+const useBearStore = createSelectors(store)
+```
+
+现在选择器已经自动生成，您可以直接访问它们：
+
+```typescript
+// get the property
+const bears = useBearStore.use.bears()
+
+// get the action
+const increment = useBearStore.use.increment()
+```
+
+### 实时演示
+
+For a working example of this, see the [Code Sandbox](https://codesandbox.io/s/zustand-auto-generate-selectors-forked-rl8v5e?file=/src/selectors.ts).
+
+### 第三方库
+
+- [auto-zustand-selectors-hook](https://github.com/Albert-Gao/auto-zustand-selectors-hook)
+- [react-hooks-global-state](https://github.com/dai-shi/react-hooks-global-state)
+- [zustood](https://github.com/udecode/zustood)
+
+---
+
+# no store actions 实践
+
+推荐的做法是将 action 和 state 放在 store 内部一起定义（让你的 action 和 state 放在一起）。
+
+```js
+export const useBoundStore = create((set) => ({
+  count: 0,
+  text: 'hello',
+  inc: () => set((state) => ({ count: state.count + 1 })),
+  setText: (text) => set({ text }),
+}))
+```
+
+这将创建一个自包含的 store ，数据和 action 都在一起。
+
+另一种方法是在 store 外部的模块级别定义 action 。
+
+```js
+export const useBoundStore = create(() => ({
+  count: 0,
+  text: 'hello',
+}))
+
+export const inc = () =>
+  useBoundStore.setState((state) => ({ count: state.count + 1 }))
+
+export const setText = (text) => useBoundStore.setState({ text })
+```
+
+这样做有几个优点：
+
+- 调用 action 不需要使用钩子（hook）
+- 它有助于代码分割
+
+虽然这种模式没有任何缺点，但有些人可能更喜欢将 action 和 state 放在一起，因为这样做更封装。
+
+# TypeScript Guide
+
+# Testing
+
+# Calling actions outside a React event handler in pre React 18
+
+Because React handles `setState` synchronously if it's called outside an event handler, updating the state outside an event handler will force react to update the components synchronously. Therefore, there is a risk of encountering the zombie-child effect. In order to fix this, the action needs to be wrapped in `unstable_batchedUpdates` like so:
+
+```jsx
+import { unstable_batchedUpdates } from 'react-dom' // or 'react-native'
+
+const useFishStore = create((set) => ({
+  fishes: 0,
+  increaseFishes: () => set((prev) => ({ fishes: prev.fishes + 1 })),
+}))
+
+const nonReactCallback = () => {
+  unstable_batchedUpdates(() => {
+    useFishStore.getState().increaseFishes()
+  })
+}
+```
+
+More details: https://github.com/pmndrs/zustand/issues/302
+
+# Map 和 Set 的使用
+
+You need to wrap Maps and Sets inside an object. When you want its update to be reflected (e.g. in React), you do it by calling `setState` on it:
+
+你需要将 Map 和 Set 封装在一个对象内。当你希望它的更新得到反映时（例如在 React 中），你可以通过对它调用 `setState` 来实现：
+
+**You can view a codesandbox here: https://codesandbox.io/s/late-https-bxz9qy**
+
+```js
+import { create } from 'zustand'
+
+const useFooBar = create(() => ({ foo: new Map(), bar: new Set() }))
+
+function doSomething() {
+  // doing something...
+
+  // If you want to update some React component that uses `useFooBar`, you have to call setState
+  // to let React know that an update happened.
+  // Following React's best practices, you should create a new Map/Set when updating them:
+  useFooBar.setState((prev) => ({
+    foo: new Map(prev.foo).set('newKey', 'newValue'),
+    bar: new Set(prev.bar).add('newKey'),
+  }))
+}
+```
+
+# Connect to state with URL
+
+Connect State with URL Hash
+
+If you want to connect state of a store to URL hash, you can create your own hash storage.
+
+```ts
+import { create } from 'zustand'
+import { persist, StateStorage, createJSONStorage } from 'zustand/middleware'
+
+const hashStorage: StateStorage = {
+  getItem: (key): string => {
+    const searchParams = new URLSearchParams(location.hash.slice(1))
+    const storedValue = searchParams.get(key) ?? ''
+    return JSON.parse(storedValue)
+  },
+  setItem: (key, newValue): void => {
+    const searchParams = new URLSearchParams(location.hash.slice(1))
+    searchParams.set(key, JSON.stringify(newValue))
+    location.hash = searchParams.toString()
+  },
+  removeItem: (key): void => {
+    const searchParams = new URLSearchParams(location.hash.slice(1))
+    searchParams.delete(key)
+    location.hash = searchParams.toString()
+  },
+}
+
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      fishes: 0,
+      addAFish: () => set({ fishes: get().fishes + 1 }),
+    }),
+    {
+      name: 'food-storage', // unique name
+      storage: createJSONStorage(() => hashStorage),
+    },
+  ),
+)
+```
+
+CodeSandbox Demo
+
+https://codesandbox.io/s/zustand-state-with-url-hash-demo-f29b88?file=/src/store/index.ts
+
+Persist and Connect State with URL Parameters (Example: URL Query Parameters)
+
+There are times when you want to conditionally connect the state to the URL. This example depicts usage of the URL query parameters while keeping it synced with another persistence implementation, like `localstorage`.
+
+If you want the URL params to always populate, the conditional check on `getUrlSearch()` can be removed.
+
+The implementation below will update the URL in place, without refresh, as the relevant states change.
+
+```ts
+import { create } from 'zustand'
+import { persist, StateStorage, createJSONStorage } from 'zustand/middleware'
+
+const getUrlSearch = () => {
+  return window.location.search.slice(1)
+}
+
+const persistentStorage: StateStorage = {
+  getItem: (key): string => {
+    // Check URL first
+    if (getUrlSearch()) {
+      const searchParams = new URLSearchParams(getUrlSearch())
+      const storedValue = searchParams.get(key)
+      return JSON.parse(storedValue as string)
+    } else {
+      // Otherwise, we should load from localstorage or alternative storage
+      return JSON.parse(localStorage.getItem(key) as string)
+    }
+  },
+  setItem: (key, newValue): void => {
+    // Check if query params exist at all, can remove check if always want to set URL
+    if (getUrlSearch()) {
+      const searchParams = new URLSearchParams(getUrlSearch())
+      searchParams.set(key, JSON.stringify(newValue))
+      window.history.replaceState(null, '', `?${searchParams.toString()}`)
+    }
+
+    localStorage.setItem(key, JSON.stringify(newValue))
+  },
+  removeItem: (key): void => {
+    const searchParams = new URLSearchParams(getUrlSearch())
+    searchParams.delete(key)
+    window.location.search = searchParams.toString()
+  },
+}
+
+type LocalAndUrlStore = {
+  typesOfFish: string[]
+  addTypeOfFish: (fishType: string) => void
+  numberOfBears: number
+  setNumberOfBears: (newNumber: number) => void
+}
+
+const storageOptions = {
+  name: 'fishAndBearsStore',
+  storage: createJSONStorage<LocalAndUrlStore>(() => persistentStorage),
+}
+
+const useLocalAndUrlStore = create(
+  persist<LocalAndUrlStore>(
+    (set) => ({
+      typesOfFish: [],
+      addTypeOfFish: (fishType) =>
+        set((state) => ({ typesOfFish: [...state.typesOfFish, fishType] })),
+
+      numberOfBears: 0,
+      setNumberOfBears: (numberOfBears) => set(() => ({ numberOfBears })),
+    }),
+    storageOptions,
+  ),
+)
+
+export default useLocalAndUrlStore
+```
+
+When generating the URL from a component, you can call buildShareableUrl:
+
+```ts
+const buildURLSuffix = (params, version = 0) => {
+  const searchParams = new URLSearchParams()
+
+  const zustandStoreParams = {
+    state: {
+      typesOfFish: params.typesOfFish,
+      numberOfBears: params.numberOfBears,
+    },
+    version: version, // version is here because that is included with how Zustand sets the state
+  }
+
+  // The URL param key should match the name of the store, as specified as in storageOptions above
+  searchParams.set('fishAndBearsStore', JSON.stringify(zustandStoreParams))
+  return searchParams.toString()
+}
+
+export const buildShareableUrl = (params, version) => {
+  return `${window.location.origin}?${buildURLSuffix(params, version)}`
+}
+```
+
+The generated URL would look like (here without any encoding, for readability):
+
+```
+https://localhost/search?fishAndBearsStore={"state":{"typesOfFish":["tilapia","salmon"],"numberOfBears":15},"version":0}}
+```
+
+# How to reset state
+
+The following pattern can be used to reset the state to its initial value.
+
+```ts
+import { create } from 'zustand'
+
+// define types for state values and actions separately
+type State = {
+  salmon: number
+  tuna: number
+}
+
+type Actions = {
+  addSalmon: (qty: number) => void
+  addTuna: (qty: number) => void
+  reset: () => void
+}
+
+// define the initial state
+const initialState: State = {
+  salmon: 0,
+  tuna: 0,
+}
+
+// create store
+const useSlice = create<State & Actions>()((set, get) => ({
+  ...initialState,
+  addSalmon: (qty: number) => {
+    set({ salmon: get().salmon + qty })
+  },
+  addTuna: (qty: number) => {
+    set({ tuna: get().tuna + qty })
+  },
+  reset: () => {
+    set(initialState)
+  },
+}))
+```
+
+Resetting multiple stores at once
+
+```ts
+import { create as _create } from 'zustand'
+import type { StateCreator } from 'zustand'
+
+const storeResetFns = new Set<() => void>()
+
+const resetAllStores = () => {
+  storeResetFns.forEach((resetFn) => {
+    resetFn()
+  })
+}
+
+export const create = (<T extends unknown>() => {
+  return (stateCreator: StateCreator<T>) => {
+    const store = _create(stateCreator)
+    const initialState = store.getState()
+    storeResetFns.add(() => {
+      store.setState(initialState, true)
+    })
+    return store
+  }
+}) as typeof _create
+```
+
+Resetting bound store using Slices pattern
+
+```ts
+import create from 'zustand'
+import type { StateCreator } from 'zustand'
+
+const sliceResetFns = new Set<() => void>()
+
+export const resetAllSlices = () => {
+  sliceResetFns.forEach((resetFn) => {
+    resetFn()
+  })
+}
+
+const initialBearState = { bears: 0 }
+
+interface BearSlice {
+  bears: number
+  addBear: () => void
+  eatFish: () => void
+}
+
+const createBearSlice: StateCreator<
+  BearSlice & FishSlice,
+  [],
+  [],
+  BearSlice
+> = (set) => {
+  sliceResetFns.add(() => set(initialBearState))
+  return {
+    ...initialBearState,
+    addBear: () => set((state) => ({ bears: state.bears + 1 })),
+    eatFish: () => set((state) => ({ fishes: state.fishes - 1 })),
+  }
+}
+
+const initialStateFish = { fishes: 0 }
+
+interface FishSlice {
+  fishes: number
+  addFish: () => void
+}
+
+const createFishSlice: StateCreator<
+  BearSlice & FishSlice,
+  [],
+  [],
+  FishSlice
+> = (set) => {
+  sliceResetFns.add(() => set(initialStateFish))
+  return {
+    ...initialStateFish,
+    addFish: () => set((state) => ({ fishes: state.fishes + 1 })),
+  }
+}
+
+const useBoundStore = create<BearSlice & FishSlice>()((...a) => ({
+  ...createBearSlice(...a),
+  ...createFishSlice(...a),
+}))
+
+export default useBoundStore
+```
+
+CodeSandbox Demo
+
+- Basic: https://codesandbox.io/s/zustand-how-to-reset-state-basic-demo-rrqyon
+- Advanced: https://codesandbox.io/s/zustand-how-to-reset-state-advanced-demo-gtu0qe
+- Immer: https://codesandbox.io/s/how-to-reset-state-advance-immer-demo-nyet3f
+
+# Initialize state with props
+
+In cases where [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) is needed, such as when a store should be initialized with props from a component, the recommended approach is to use a vanilla store with React.context.
+
+Store creator with `createStore`
+
+```ts
+import { createStore } from 'zustand'
+
+interface BearProps {
+  bears: number
+}
+
+interface BearState extends BearProps {
+  addBear: () => void
+}
+
+type BearStore = ReturnType<typeof createBearStore>
+
+const createBearStore = (initProps?: Partial<BearProps>) => {
+  const DEFAULT_PROPS: BearProps = {
+    bears: 0,
+  }
+  return createStore<BearState>()((set) => ({
+    ...DEFAULT_PROPS,
+    ...initProps,
+    addBear: () => set((state) => ({ bears: ++state.bears })),
+  }))
+}
+```
+
+Creating a context with `React.createContext`
+
+```ts
+import { createContext } from 'react'
+
+export const BearContext = createContext<BearStore | null>(null)
+```
+
+Basic component usage
+
+```tsx
+// Provider implementation
+import { useRef } from 'react'
+
+function App() {
+  const store = useRef(createBearStore()).current
+  return (
+    <BearContext.Provider value={store}>
+      <BasicConsumer />
+    </BearContext.Provider>
+  )
+}
+// Consumer component
+import { useContext } from 'react'
+import { useStore } from 'zustand'
+
+function BasicConsumer() {
+  const store = useContext(BearContext)
+  if (!store) throw new Error('Missing BearContext.Provider in the tree')
+  const bears = useStore(store, (s) => s.bears)
+  const addBear = useStore(store, (s) => s.addBear)
+  return (
+    <>
+      <div>{bears} Bears.</div>
+      <button onClick={addBear}>Add bear</button>
+    </>
+  )
+}
+```
+
+Common patterns
+
+Wrapping the context provider
+
+```tsx
+// Provider wrapper
+import { useRef } from 'react'
+
+type BearProviderProps = React.PropsWithChildren<BearProps>
+
+function BearProvider({ children, ...props }: BearProviderProps) {
+  const storeRef = useRef<BearStore>()
+  if (!storeRef.current) {
+    storeRef.current = createBearStore(props)
+  }
+  return (
+    <BearContext.Provider value={storeRef.current}>
+      {children}
+    </BearContext.Provider>
+  )
+}
+```
+
+Extracting context logic into a custom hook
+
+```tsx
+// Mimic the hook returned by `create`
+import { useContext } from 'react'
+import { useStore } from 'zustand'
+
+function useBearContext<T>(selector: (state: BearState) => T): T {
+  const store = useContext(BearContext)
+  if (!store) throw new Error('Missing BearContext.Provider in the tree')
+  return useStore(store, selector)
+}
+// Consumer usage of the custom hook
+function CommonConsumer() {
+  const bears = useBearContext((s) => s.bears)
+  const addBear = useBearContext((s) => s.addBear)
+  return (
+    <>
+      <div>{bears} Bears.</div>
+      <button onClick={addBear}>Add bear</button>
+    </>
+  )
+}
+```
+
+Optionally allow using a custom equality function
+
+```tsx
+// Allow custom equality function by using useStoreWithEqualityFn instead of useStore
+import { useContext } from 'react'
+import { useStoreWithEqualityFn } from 'zustand/traditional'
+
+function useBearContext<T>(
+  selector: (state: BearState) => T,
+  equalityFn?: (left: T, right: T) => boolean,
+): T {
+  const store = useContext(BearContext)
+  if (!store) throw new Error('Missing BearContext.Provider in the tree')
+  return useStoreWithEqualityFn(store, selector, equalityFn)
+}
+```
+
+Complete example
+
+```tsx
+// Provider wrapper & custom hook consumer
+function App2() {
+  return (
+    <BearProvider bears={2}>
+      <HookConsumer />
+    </BearProvider>
+  )
+}
+```
+
+# Slices Pattern
+
+Slicing the store into smaller stores
+
+Your store can become bigger and bigger and tougher to maintain as you add more features.
+
+You can divide your main store into smaller individual stores to achieve modularity. This is simple to accomplish in Zustand!
+
+The first individual store:
+
+```js
+export const createFishSlice = (set) => ({
+  fishes: 0,
+  addFish: () => set((state) => ({ fishes: state.fishes + 1 })),
+})
+```
+
+Another individual store:
+
+```js
+export const createBearSlice = (set) => ({
+  bears: 0,
+  addBear: () => set((state) => ({ bears: state.bears + 1 })),
+  eatFish: () => set((state) => ({ fishes: state.fishes - 1 })),
+})
+```
+
+You can now combine both the stores into **one bounded store**:
+
+```js
+import { create } from 'zustand'
+import { createBearSlice } from './bearSlice'
+import { createFishSlice } from './fishSlice'
+
+export const useBoundStore = create((...a) => ({
+  ...createBearSlice(...a),
+  ...createFishSlice(...a),
+}))
+```
+
+Usage in a React component
+
+```jsx
+import { useBoundStore } from './stores/useBoundStore'
+
+function App() {
+  const bears = useBoundStore((state) => state.bears)
+  const fishes = useBoundStore((state) => state.fishes)
+  const addBear = useBoundStore((state) => state.addBear)
+  return (
+    <div>
+      <h2>Number of bears: {bears}</h2>
+      <h2>Number of fishes: {fishes}</h2>
+      <button onClick={() => addBear()}>Add a bear</button>
+    </div>
+  )
+}
+
+export default App
+```
+
+Updating multiple stores
+
+You can update multiple stores, at the same time, in a single function.
+
+```js
+export const createBearFishSlice = (set, get) => ({
+  addBearAndFish: () => {
+    get().addBear()
+    get().addFish()
+  },
+})
+```
+
+Combining all the stores together is the same as before.
+
+```js
+import { create } from 'zustand'
+import { createBearSlice } from './bearSlice'
+import { createFishSlice } from './fishSlice'
+import { createBearFishSlice } from './createBearFishSlice'
+
+export const useBoundStore = create((...a) => ({
+  ...createBearSlice(...a),
+  ...createFishSlice(...a),
+  ...createBearFishSlice(...a),
+}))
+```
+
+Adding middlewares
+
+Adding middlewares to a combined store is the same as with other normal stores.
+
+Adding `persist` middleware to our `useBoundStore`:
+
+```js
+import { create } from 'zustand'
+import { createBearSlice } from './bearSlice'
+import { createFishSlice } from './fishSlice'
+import { persist } from 'zustand/middleware'
+
+export const useBoundStore = create(
+  persist(
+    (...a) => ({
+      ...createBearSlice(...a),
+      ...createFishSlice(...a),
+    }),
+    { name: 'bound-store' },
+  ),
+)
+```
+
+Please keep in mind you should only apply middlewares in the combined store. Applying them inside individual slices can lead to unexpected issues.
+
+Usage with TypeScript
+
+A detailed guide on how to use the slice pattern in Zustand with TypeScript can be found [here](https://docs.pmnd.rs/zustand/guides/typescript#slices-pattern).
+
+# Prevent rerenders with useShallow
+
+When you need to subscribe to a computed state from a store, the recommended way is to use a selector.
+
+The computed selector will cause a rererender if the output has changed according to [Object.is](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is?retiredLocale=it).
+
+In this case you might want to use `useShallow` to avoid a rerender if the computed value is always shallow equal the previous one.
+
+Example
+
+We have a store that associates to each bear a meal and we want to render their names.
+
+```js
+import { create } from 'zustand'
+
+const useMeals = create(() => ({
+  papaBear: 'large porridge-pot',
+  mamaBear: 'middle-size porridge pot',
+  littleBear: 'A little, small, wee pot',
+}))
+
+export const BearNames = () => {
+  const names = useMeals((state) => Object.keys(state))
+
+  return <div>{names.join(', ')}</div>
+}
+```
+
+Now papa bear wants a pizza instead:
+
+```js
+useMeals.setState({
+  papaBear: 'a large pizza',
+})
+```
+
+This change causes `BearNames` rerenders even though the actual output of `names` has not changed according to shallow equal.
+
+We can fix that using `useShallow`!
+
+```js
+import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
+
+const useMeals = create(() => ({
+  papaBear: 'large porridge-pot',
+  mamaBear: 'middle-size porridge pot',
+  littleBear: 'A little, small, wee pot',
+}))
+
+export const BearNames = () => {
+  const names = useMeals(useShallow((state) => Object.keys(state)))
+
+  return <div>{names.join(', ')}</div>
+}
+```
+
+Now they can all order other meals without causing unnecessary rerenders of our `BearNames` component.
+
+# SSR and Hydration
+
+Server-side Rendering (SSR)
+
+Server-side Rendering (SSR) is a technique that helps us render our components into HTML strings on the server, send them directly to the browser, and finally "hydrate" the static markup into a fully interactive app on the client.
+
+React
+
+Let's say we want to render a stateless app using React. In order to do that, we need to use `express`, `react` and `react-dom/server`. We don't need `react-dom/client` since it's a stateless app.
+
+Let's dive into that:
+
+- `express` helps us build a web app that we can run using Node,
+- `react` helps us build the UI components that we use in our app,
+- `react-dom/server` helps us render our components on a server.
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "sourceMap": true,
+    "target": "esnext"
+  },
+  "include": ["**/*"]
+}
+```
+
+> **Note:** do not forget to remove all comments from your `tsconfig.json` file.
+
+```tsx
+// app.tsx
+export const App = () => {
+  return (
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Static Server-side-rendered App</title>
+      </head>
+      <body>
+        <div>Hello World!</div>
+      </body>
+    </html>
+  )
+}
+// server.tsx
+import express from 'express'
+import React from 'react'
+import ReactDOMServer from 'react-dom/server'
+
+import { App } from './app.tsx'
+
+const port = Number.parseInt(process.env.PORT || '3000', 10)
+const app = express()
+
+app.get('/', (_, res) => {
+  const { pipe } = ReactDOMServer.renderToPipeableStream(<App />, {
+    onShellReady() {
+      res.setHeader('content-type', 'text/html')
+      pipe(res)
+    },
+  })
+})
+
+app.listen(port, () => {
+  console.log(`Server is listening at ${port}`)
+})
+tsc --build
+node server.js
+```
+
+Hydration
+
+Hydration turns the initial HTML snapshot from the server into a fully interactive app that runs in the browser. The right way to "hydrate" a component is by using `hydrateRoot`.
+
+React
+
+Let's say we want to render a stateful app using React. In order to do that we need to use `express`, `react`, `react-dom/server` and `react-dom/client`.
+
+Let's dive into that:
+
+- `express` helps us build a web app that we can run using Node,
+- `react` helps us build the UI components that we use in our app,
+- `react-dom/server` helps us render our components on a server,
+- `react-dom/client` helps us hydrate our components on a client.
+
+> **Note:** Do not forget that even if we can render our components on a server, it is important to "hydrate" them on a client to make them interactive.
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "sourceMap": true,
+    "target": "esnext"
+  },
+  "include": ["**/*"]
+}
+```
+
+> **Note:** do not forget to remove all comments in your `tsconfig.json` file.
+
+```tsx
+// app.tsx
+export const App = () => {
+  return (
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Static Server-side-rendered App</title>
+      </head>
+      <body>
+        <div>Hello World!</div>
+      </body>
+    </html>
+  )
+}
+// main.tsx
+import ReactDOMClient from 'react-dom/client'
+
+import { App } from './app.tsx'
+
+ReactDOMClient.hydrateRoot(<App />, document)
+// server.tsx
+import express from 'express'
+import React from 'react'
+import ReactDOMServer from 'react-dom/server'
+
+import { App } from './app.tsx'
+
+const port = Number.parseInt(process.env.PORT || '3000', 10)
+const app = express()
+
+app.use('/', (_, res) => {
+  const { pipe } = ReactDOMServer.renderToPipeableStream(<App />, {
+    bootstrapScripts: ['/main.js'],
+    onShellReady() {
+      res.setHeader('content-type', 'text/html')
+      pipe(res)
+    },
+  })
+})
+
+app.listen(port, () => {
+  console.log(`Server is listening at ${port}`)
+})
+tsc --build
+node server.js
+```
+
+> **Warning:** The React tree you pass to `hydrateRoot` needs to produce the same output as it did on the server. The most common causes leading to hydration errors include:
+>
+> - Extra whitespace (like newlines) around the React-generated HTML inside the root node.
+> - Using checks like typeof window !== 'undefined' in your rendering logic.
+> - Using browser-only APIs like `window.matchMedia` in your rendering logic.
+> - Rendering different data on the server and the client.
+>
+> React recovers from some hydration errors, but you must fix them like other bugs. In the best case, they’ll lead to a slowdown; in the worst case, event handlers can get attached to the wrong elements.
+
+You can read more about the caveats and pitfalls here: [hydrateRoot](https://react.dev/reference/react-dom/client/hydrateRoot)
+
+# Setup with Next.js
+
+[Next.js](https://nextjs.org/) is a popular server-side rendering framework for React that presents some unique challenges for using Zustand properly. Keep in mind that Zustand store is a global variable (AKA module state) making it optional to use a `Context`. These challenges include:
+
+- **Per-request store:** A Next.js server can handle multiple requests simultaneously. This means that the store should be created per request and should not be shared across requests.
+- **SSR friendly:** Next.js applications are rendered twice, first on the server and again on the client. Having different outputs on both the client and the server will result in "hydration errors." The store will have to be initialized on the server and then re-initialized on the client with the same data in order to avoid that. Please read more about that in our [SSR and Hydration](https://docs.pmnd.rs/zustand/guides/ssr-and-hydration) guide.
+- **SPA routing friendly:** Next.js supports a hybrid model for client side routing, which means that in order to reset a store, we need to intialize it at the component level using a `Context`.
+- **Server caching friendly:** Recent versions of Next.js (specifically applications using the App Router architecture) support aggressive server caching. Due to our store being a **module state**, it is completely compatible with this caching.
+
+We have these general recommendations for the appropriate use of Zustand:
+
+- **No global stores** - Because the store should not be shared across requests, it should not be defined as a global variable. Instead, the store should be created per request.
+- **React Server Components should not read from or write to the store** - RSCs cannot use hooks or context. They aren't meant to be stateful. Having an RSC read from or write values to a global store violates the architecture of Next.js.
+
+Creating a store per request
+
+Let's write our store factory function that will create a new store for each request.
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+> **Note:** do not forget to remove all comments from your `tsconfig.json` file.
+
+```ts
+// src/stores/counter-store.ts
+import { createStore } from 'zustand/vanilla'
+
+export type CounterState = {
+  count: number
+}
+
+export type CounterActions = {
+  decrementCount: () => void
+  incrementCount: () => void
+}
+
+export type CounterStore = CounterState & CounterActions
+
+export const defaultInitState: CounterState = {
+  count: 0,
+}
+
+export const createCounterStore = (
+  initState: CounterState = defaultInitState,
+) => {
+  return createStore<CounterStore>()((set) => ({
+    ...initState,
+    decrementCount: () => set((state) => ({ count: state.count - 1 })),
+    incrementCount: () => set((state) => ({ count: state.count + 1 })),
+  }))
+}
+```
+
+Providing the store
+
+Let's use the `createCounterStore` in our component and share it using a context provider.
+
+```tsx
+// src/providers/counter-store-provider.tsx
+'use client'
+
+import { type ReactNode, createContext, useRef, useContext } from 'react'
+import { type StoreApi, useStore } from 'zustand'
+
+import { type CounterStore, createCounterStore } from '@/stores/counter-store'
+
+export const CounterStoreContext = createContext<StoreApi<CounterStore> | null>(
+  null,
+)
+
+export interface CounterStoreProviderProps {
+  children: ReactNode
+}
+
+export const CounterStoreProvider = ({
+  children,
+}: CounterStoreProviderProps) => {
+  const storeRef = useRef<StoreApi<CounterStore>>()
+  if (!storeRef.current) {
+    storeRef.current = createCounterStore()
+  }
+
+  return (
+    <CounterStoreContext.Provider value={storeRef.current}>
+      {children}
+    </CounterStoreContext.Provider>
+  )
+}
+
+export const useCounterStore = <T,>(
+  selector: (store: CounterStore) => T,
+): T => {
+  const counterStoreContext = useContext(CounterStoreContext)
+
+  if (!counterStoreContext) {
+    throw new Error(`useCounterStore must be use within CounterStoreProvider`)
+  }
+
+  return useStore(counterStoreContext, selector)
+}
+```
+
+> **Note:** In this example, we ensure that this component is re-render-safe by checking the value of the reference, so that the store is only created once. This component will only be rendered once per request on the server, but might be re-rendered multiple times on the client if there are stateful client components located above this component in the tree, or if this component also contains other mutable state that causes a re-render.
+
+Initializing the store
+
+```ts
+// src/stores/counter-store.ts
+import { createStore } from 'zustand/vanilla'
+
+export type CounterState = {
+  count: number
+}
+
+export type CounterActions = {
+  decrementCount: () => void
+  incrementCount: () => void
+}
+
+export type CounterStore = CounterState & CounterActions
+
+export const initCounterStore = (): CounterState => {
+  return { count: new Date().getFullYear() }
+}
+
+export const defaultInitState: CounterState = {
+  count: 0,
+}
+
+export const createCounterStore = (
+  initState: CounterState = defaultInitState,
+) => {
+  return createStore<CounterStore>()((set) => ({
+    ...initState,
+    decrementCount: () => set((state) => ({ count: state.count - 1 })),
+    incrementCount: () => set((state) => ({ count: state.count + 1 })),
+  }))
+}
+// src/providers/counter-store-provider.tsx
+'use client'
+
+import { type ReactNode, createContext, useRef, useContext } from 'react'
+import { type StoreApi, useStore } from 'zustand'
+
+import {
+  type CounterStore,
+  createCounterStore,
+  initCounterStore,
+} from '@/stores/counter-store'
+
+export const CounterStoreContext = createContext<StoreApi<CounterStore> | null>(
+  null,
+)
+
+export interface CounterStoreProviderProps {
+  children: ReactNode
+}
+
+export const CounterStoreProvider = ({
+  children,
+}: CounterStoreProviderProps) => {
+  const storeRef = useRef<StoreApi<CounterStore>>()
+  if (!storeRef.current) {
+    storeRef.current = createCounterStore(initCounterStore())
+  }
+
+  return (
+    <CounterStoreContext.Provider value={storeRef.current}>
+      {children}
+    </CounterStoreContext.Provider>
+  )
+}
+
+export const useCounterStore = <T,>(
+  selector: (store: CounterStore) => T,
+): T => {
+  const counterStoreContext = useContext(CounterStoreContext)
+
+  if (!counterStoreContext) {
+    throw new Error(`useCounterStore must be use within CounterStoreProvider`)
+  }
+
+  return useStore(counterStoreContext, selector)
+}
+```
+
+Using the store with different architectures
+
+There are two architectures for a Next.js application: the [Pages Router](https://nextjs.org/docs/pages/building-your-application/routing) and the [App Router](https://nextjs.org/docs/app/building-your-application/routing). The usage of Zustand on both architectures should be the same with slight differences related to each architecture.
+
+Pages Router
+
+```tsx
+// src/components/pages/home-page.tsx
+import { useCounterStore } from '@/providers/counter-store-provider.ts'
+
+export const HomePage = () => {
+  const { count, incrementCount, decrementCount } = useCounterStore(
+    (state) => state,
+  )
+
+  return (
+    <div>
+      Count: {count}
+      <hr />
+      <button type="button" onClick={() => void incrementCount()}>
+        Increment Count
+      </button>
+      <button type="button" onClick={() => void decrementCount()}>
+        Decrement Count
+      </button>
+    </div>
+  )
+}
+// src/_app.tsx
+import type { AppProps } from 'next/app'
+
+import { CounterStoreProvider } from '@/providers/counter-store-provider.tsx'
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <CounterStoreProvider>
+      <Component {...pageProps} />
+    </CounterStoreProvider>
+  )
+}
+// src/pages/index.tsx
+import { HomePage } from '@/components/pages/home-page.tsx'
+
+export default function Home() {
+  return <HomePage />
+}
+```
+
+> **Note:** creating a store per route would require creating and sharing the store at page (route) component level. Try not to use this if you do not need to create a store per route.
+
+```tsx
+// src/pages/index.tsx
+import { CounterStoreProvider } from '@/providers/counter-store-provider.tsx'
+import { HomePage } from '@/components/pages/home-page.tsx'
+
+export default function Home() {
+  return (
+    <CounterStoreProvider>
+      <HomePage />
+    </CounterStoreProvider>
+  )
+}
+```
+
+App Router
+
+```tsx
+// src/components/pages/home-page.tsx
+'use client'
+
+import { useCounterStore } from '@/providers/counter-store-provider'
+
+export const HomePage = () => {
+  const { count, incrementCount, decrementCount } = useCounterStore(
+    (state) => state,
+  )
+
+  return (
+    <div>
+      Count: {count}
+      <hr />
+      <button type="button" onClick={() => void incrementCount()}>
+        Increment Count
+      </button>
+      <button type="button" onClick={() => void decrementCount()}>
+        Decrement Count
+      </button>
+    </div>
+  )
+}
+// src/app/layout.tsx
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+
+import { CounterStoreProvider } from '@/providers/counter-store-provider'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: 'Create Next App',
+  description: 'Generated by create next app',
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <CounterStoreProvider>{children}</CounterStoreProvider>
+      </body>
+    </html>
+  )
+}
+// src/app/page.tsx
+import { HomePage } from '@/components/pages/home-page'
+
+export default function Home() {
+  return <HomePage />
+}
+```
+
+> **Note:** creating a store per route would require creating and sharing the store at page (route) component level. Try not to use this if you do not need to create a store per route.
+
+```tsx
+// src/app/page.tsx
+import { CounterStoreProvider } from '@/providers/counter-store-provider'
+import { HomePage } from '@/components/pages/home-page'
+
+export default function Home() {
+  return (
+    <CounterStoreProvider>
+      <HomePage />
+    </CounterStoreProvider>
+  )
+}
+```
+
+# Immer middleware
+
+The [Immer](https://github.com/immerjs/immer) middleware enables you to use immutable state in a more convenient way. Also, with Immer, you can simplify handling immutable data structures in Zustand.
+
+Installation
+
+In order to use the Immer middleware in Zustand, you will need to install Immer as a direct dependency.
+
+```bash
+npm install immer
+```
+
+Usage
+
+(Notice the extra parentheses after the type parameter as mentioned in the [Typescript Guide](https://docs.pmnd.rs/zustand/guides/typescript)).
+
+Updating simple states
+
+```ts
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
+
+type State = {
+  count: number
+}
+
+type Actions = {
+  increment: (qty: number) => void
+  decrement: (qty: number) => void
+}
+
+export const useCountStore = create<State & Actions>()(
+  immer((set) => ({
+    count: 0,
+    increment: (qty: number) =>
+      set((state) => {
+        state.count += qty
+      }),
+    decrement: (qty: number) =>
+      set((state) => {
+        state.count -= qty
+      }),
+  })),
+)
+```
+
+Updating complex states
+
+```ts
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
+
+interface Todo {
+  id: string
+  title: string
+  done: boolean
+}
+
+type State = {
+  todos: Record<string, Todo>
+}
+
+type Actions = {
+  toggleTodo: (todoId: string) => void
+}
+
+export const useTodoStore = create<State & Actions>()(
+  immer((set) => ({
+    todos: {
+      '82471c5f-4207-4b1d-abcb-b98547e01a3e': {
+        id: '82471c5f-4207-4b1d-abcb-b98547e01a3e',
+        title: 'Learn Zustand',
+        done: false,
+      },
+      '354ee16c-bfdd-44d3-afa9-e93679bda367': {
+        id: '354ee16c-bfdd-44d3-afa9-e93679bda367',
+        title: 'Learn Jotai',
+        done: false,
+      },
+      '771c85c5-46ea-4a11-8fed-36cc2c7be344': {
+        id: '771c85c5-46ea-4a11-8fed-36cc2c7be344',
+        title: 'Learn Valtio',
+        done: false,
+      },
+      '363a4bac-083f-47f7-a0a2-aeeee153a99c': {
+        id: '363a4bac-083f-47f7-a0a2-aeeee153a99c',
+        title: 'Learn Signals',
+        done: false,
+      },
+    },
+    toggleTodo: (todoId: string) =>
+      set((state) => {
+        state.todos[todoId].done = !state.todos[todoId].done
+      }),
+  })),
+)
+```
+
+Gotchas
+
+In this section you will find some things that you need to keep in mind when using Zustand with Immer.
+
+My subscriptions aren't being called
+
+If you are using Immer, make sure you are actually following [the rules of Immer](https://immerjs.github.io/immer/pitfalls).
+
+For example, you have to add `[immerable] = true` for [class objects](https://immerjs.github.io/immer/complex-objects) to work. If you don't do this, Immer will still mutate the object, but not as a proxy, so it will also update the current state. Zustand checks if the state has actually changed, so since both the current state and the next state are equal (if you don't do it correctly), Zustand will skip calling the subscriptions.
+
+CodeSandbox Demo
+
+- [Basic](https://codesandbox.io/p/sandbox/zustand-updating-draft-states-basic-demo-forked-96mkdw),
+- [Advanced](https://codesandbox.io/p/sandbox/zustand-updating-draft-states-advanced-demo-forked-phkzzg).
+
+# Persisting store data
+
+The Persist middleware enables you to store your Zustand state in a storage (e.g., `localStorage`, `AsyncStorage`, `IndexedDB`, etc.), thus persisting its data.
+
+Note that this middleware supports both synchronous storages, like `localStorage`, and asynchronous storages, like `AsyncStorage`, but using an asynchronous storage does come with a cost. See [Hydration and asynchronous storages](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#hydration-and-asynchronous-storages) for more details.
+
+Simple example
+
+```ts
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+
+export const useBearStore = create(
+  persist(
+    (set, get) => ({
+      bears: 0,
+      addABear: () => set({ bears: get().bears + 1 }),
+    }),
+    {
+      name: 'food-storage', // name of the item in the storage (must be unique)
+      storage: createJSONStorage(() => sessionStorage), // (optional) by default, 'localStorage' is used
+    },
+  ),
+)
+```
+
+Options
+
+```
+name
+```
+
+This is the only required option. The given name is going to be the key used to store your Zustand state in the storage, so it must be unique.
+
+```
+storage
+```
+
+> Type: `() => StateStorage`
+
+The `StateStorage` can be imported with:
+
+```ts
+import { StateStorage } from 'zustand/middleware'
+```
+
+> Default: `createJSONStorage(() => localStorage)`
+
+Enables you to use your own storage. Simply pass a function that returns the storage you want to use. It's recommended to use the [`createJSONStorage`](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#createjsonstorage) helper function to create a `storage` object that is compliant with the `StateStorage` interface.
+
+Example:
+
+```ts
+import { persist, createJSONStorage } from 'zustand/middleware'
+
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      // ...
+    }),
+    {
+      // ...
+      storage: createJSONStorage(() => AsyncStorage),
+    },
+  ),
+)
+partialize
+```
+
+> Type: `(state: Object) => Object`
+
+> Default: `(state) => state`
+
+Enables you to pick some of the state's fields to be stored in the storage.
+
+You could omit multiple fields using the following:
+
+```ts
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      foo: 0,
+      bar: 1,
+    }),
+    {
+      // ...
+      partialize: (state) =>
+        Object.fromEntries(
+          Object.entries(state).filter(([key]) => !['foo'].includes(key)),
+        ),
+    },
+  ),
+)
+```
+
+Or you could allow only specific fields using the following:
+
+```ts
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      foo: 0,
+      bar: 1,
+    }),
+    {
+      // ...
+      partialize: (state) => ({ foo: state.foo }),
+    },
+  ),
+)
+onRehydrateStorage
+```
+
+> Type: `(state: Object) => ((state?: Object, error?: Error) => void) | void`
+
+This option enables you to pass a listener function that will be called when the storage is hydrated.
+
+Example:
+
+```ts
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      // ...
+    }),
+    {
+      // ...
+      onRehydrateStorage: (state) => {
+        console.log('hydration starts')
+
+        // optional
+        return (state, error) => {
+          if (error) {
+            console.log('an error happened during hydration', error)
+          } else {
+            console.log('hydration finished')
+          }
+        }
+      },
+    },
+  ),
+)
+version
+```
+
+> Type: `number`
+
+> Default: `0`
+
+If you want to introduce a breaking change in your storage (e.g. renaming a field), you can specify a new version number. By default, if the version in the storage does not match the version in the code, the stored value won't be used. You can use the [migrate](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#migrate) function (see below) to handle breaking changes in order to persist previously stored data.
+
+```
+migrate
+```
+
+> Type: `(persistedState: Object, version: number) => Object | Promise<Object>`
+
+> Default: `(persistedState) => persistedState`
+
+You can use this option to handle versions migration. The migrate function takes the persisted state and the version number as arguments. It must return a state that is compliant to the latest version (the version in the code).
+
+For instance, if you want to rename a field, you can use the following:
+
+```ts
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      newField: 0, // let's say this field was named otherwise in version 0
+    }),
+    {
+      // ...
+      version: 1, // a migration will be triggered if the version in the storage mismatches this one
+      migrate: (persistedState, version) => {
+        if (version === 0) {
+          // if the stored value is in version 0, we rename the field to the new name
+          persistedState.newField = persistedState.oldField
+          delete persistedState.oldField
+        }
+
+        return persistedState
+      },
+    },
+  ),
+)
+merge
+```
+
+> Type: `(persistedState: Object, currentState: Object) => Object`
+
+> Default: `(persistedState, currentState) => ({ ...currentState, ...persistedState })`
+
+In some cases, you might want to use a custom merge function to merge the persisted value with the current state.
+
+By default, the middleware does a shallow merge. The shallow merge might not be enough if you have partially persisted nested objects. For instance, if the storage contains the following:
+
+```ts
+{
+  foo: {
+    bar: 0,
+  }
+}
+```
+
+But your Zustand store contains:
+
+```ts
+{
+  foo: {
+    bar: 0,
+    baz: 1,
+  }
+}
+```
+
+The shallow merge will erase the `baz` field from the `foo` object. One way to fix this would be to give a custom deep merge function:
+
+```ts
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      foo: {
+        bar: 0,
+        baz: 1,
+      },
+    }),
+    {
+      // ...
+      merge: (persistedState, currentState) =>
+        deepMerge(currentState, persistedState),
+    },
+  ),
+)
+skipHydration
+```
+
+> Type: `boolean | undefined`
+
+> Default: `undefined`
+
+By default the store will be hydrated on initialization.
+
+In some applications you may need to control when the first hydration occurs. For example, in server-rendered apps.
+
+If you set `skipHydration`, the initial call for hydration isn't called, and it is left up to you to manually call `rehydrate()`.
+
+```ts
+export const useBoundStore = create(
+  persist(
+    () => ({
+      count: 0,
+      // ...
+    }),
+    {
+      // ...
+      skipHydration: true,
+    },
+  ),
+)
+import { useBoundStore } from './path-to-store';
+
+export function StoreConsumer() {
+  // hydrate persisted store after on mount
+  useEffect(() => {
+    useBoundStore.persist.rehydrate();
+  }, [])
+
+  return (
+    //...
+  )
+}
+```
+
+API
+
+> Version: >=3.6.3
+
+The Persist API enables you to do a number of interactions with the Persist middleware from inside or outside of a React component.
+
+```
+getOptions
+```
+
+> Type: `() => Partial<PersistOptions>`
+
+> Returns: Options of the Persist middleware
+
+For example, it can be used to obtain the storage name:
+
+```ts
+useBoundStore.persist.getOptions().name
+setOptions
+```
+
+> Type: `(newOptions: Partial<PersistOptions>) => void`
+
+Changes the middleware options. Note that the new options will be merged with the current ones.
+
+For instance, this can be used to change the storage name:
+
+```ts
+useBoundStore.persist.setOptions({
+  name: 'new-name',
+})
+```
+
+Or even to change the storage engine:
+
+```ts
+useBoundStore.persist.setOptions({
+  storage: createJSONStorage(() => sessionStorage),
+})
+clearStorage
+```
+
+> Type: `() => void`
+
+Clears everything stored under the [name](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#name) key.
+
+```ts
+useBoundStore.persist.clearStorage()
+rehydrate
+```
+
+> Type: `() => Promise<void>`
+
+In some cases, you might want to trigger the rehydration manually. This can be done by calling the `rehydrate` method.
+
+```ts
+await useBoundStore.persist.rehydrate()
+hasHydrated
+```
+
+> Type: `() => boolean`
+
+This is a non-reactive getter to check if the storage has been hydrated (note that it updates when calling [`rehydrate`](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#rehydrate)).
+
+```ts
+useBoundStore.persist.hasHydrated()
+onHydrate
+```
+
+> Type: `(listener: (state) => void) => () => void`
+
+> Returns: Unsubscribe function
+
+This listener will be called when the hydration process starts.
+
+```ts
+const unsub = useBoundStore.persist.onHydrate((state) => {
+  console.log('hydration starts')
+})
+
+// later on...
+unsub()
+onFinishHydration
+```
+
+> Type: `(listener: (state) => void) => () => void`
+
+> Returns: Unsubscribe function
+
+This listener will be called when the hydration process ends.
+
+```ts
+const unsub = useBoundStore.persist.onFinishHydration((state) => {
+  console.log('hydration finished')
+})
+
+// later on...
+unsub()
+createJSONStorage
+```
+
+> Type: `(getStorage: () => StateStorage, options?: JsonStorageOptions) => StateStorage`
+
+> Returns: `PersistStorage`
+
+This helper function enables you to create a [`storage`](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#storage) object which is useful when you want to use a custom storage engine.
+
+`getStorage` is a function that returns the storage engine with the properties `getItem`, `setItem`, and `removeItem`.
+
+`options` is an optional object that can be used to customize the serialization and deserialization of the data. `options.reviver` is a function that is passed to `JSON.parse` to deserialize the data. `options.replacer` is a function that is passed to `JSON.stringify` to serialize the data.
+
+```ts
+import { createJSONStorage } from 'zustand/middleware'
+
+const storage = createJSONStorage(() => sessionStorage, {
+  reviver: (key, value) => {
+    if (value && value.type === 'date') {
+      return new Date(value)
+    }
+    return value
+  },
+  replacer: (key, value) => {
+    if (value instanceof Date) {
+      return { type: 'date', value: value.toISOString() }
+    }
+    return value
+  },
+})
+```
+
+Hydration and asynchronous storages
+
+To explain what is the "cost" of asynchronous storages, you need to understand what is hydration.
+
+In a nutshell, hydration is a process of retrieving persisted state from the storage and merging it with the current state.
+
+The Persist middleware does two kinds of hydration: synchronous and asynchronous. If the given storage is synchronous (e.g., `localStorage`), hydration will be done synchronously. On the other hand, if the given storage is asynchronous (e.g., `AsyncStorage`), hydration will be done asynchronously (shocking, I know!).
+
+But what's the catch? With synchronous hydration, the Zustand store will already have been hydrated at its creation. In contrast, with asynchronous hydration, the Zustand store will be hydrated later on, in a microtask.
+
+Why does it matter? Asynchronous hydration can cause some unexpected behaviors. For instance, if you use Zustand in a React app, the store will **not** be hydrated at the initial render. In cases where your app depends on the persisted value at page load, you might want to wait until the store has been hydrated before showing anything. For example, your app might think the user is not logged in because it's the default, but in reality the store has not been hydrated yet.
+
+If your app does depends on the persisted state at page load, see [*How can I check if my store has been hydrated*](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#how-can-i-check-if-my-store-has-been-hydrated) in the [FAQ](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#faq) section below.
+
+Usage in Next.js
+
+NextJS uses Server Side Rendering, and it will compare the rendered component on the server with the one rendered on client. But since you are using data from browser to change your component, the two renders will differ and Next will throw a warning at you.
+
+The errors usually are:
+
+- Text content does not match server-rendered HTML
+- Hydration failed because the initial UI does not match what was rendered on the server
+- There was an error while hydrating. Because the error happened outside of a Suspense boundary, the entire root will switch to client rendering
+
+To solve these errors, create a custom hook so that Zustand waits a little before changing your components.
+
+Create a file with the following:
+
+```ts
+// useStore.ts
+import { useState, useEffect } from 'react'
+
+const useStore = <T, F>(
+  store: (callback: (state: T) => unknown) => unknown,
+  callback: (state: T) => F,
+) => {
+  const result = store(callback) as F
+  const [data, setData] = useState<F>()
+
+  useEffect(() => {
+    setData(result)
+  }, [result])
+
+  return data
+}
+
+export default useStore
+```
+
+Now in your pages, you will use the hook a little bit differently:
+
+```ts
+// useBearStore.ts
+
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+// the store itself does not need any change
+export const useBearStore = create(
+  persist(
+    (set, get) => ({
+      bears: 0,
+      addABear: () => set({ bears: get().bears + 1 }),
+    }),
+    {
+      name: 'food-storage',
+    },
+  ),
+)
+// yourComponent.tsx
+
+import useStore from './useStore'
+import { useBearStore } from './stores/useBearStore'
+
+const bears = useStore(useBearStore, (state) => state.bears)
+```
+
+Credits: [This reply to an issue](https://github.com/pmndrs/zustand/issues/938#issuecomment-1481801942), which points to [this blog post](https://dev.to/abdulsamad/how-to-use-zustands-persist-middleware-in-nextjs-4lb5).
+
+FAQ
+
+How can I check if my store has been hydrated
+
+There are a few different ways to do this.
+
+You can use the [`onRehydrateStorage`](https://docs.pmnd.rs/zustand/integrations/persisting-store-data#onrehydratestorage) listener function to update a field in the store:
+
+```ts
+const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      // ...
+      _hasHydrated: false,
+      setHasHydrated: (state) => {
+        set({
+          _hasHydrated: state
+        });
+      }
+    }),
+    {
+      // ...
+      onRehydrateStorage: () => (state) => {
+        state.setHasHydrated(true)
+      }
+    }
+  )
+);
+
+export default function App() {
+  const hasHydrated = useBoundStore(state => state._hasHydrated);
+
+  if (!hasHydrated) {
+    return <p>Loading...</p>
+  }
+
+  return (
+    // ...
+  );
+}
+```
+
+You can also create a custom `useHydration` hook:
+
+```ts
+const useBoundStore = create(persist(...))
+
+const useHydration = () => {
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    // Note: This is just in case you want to take into account manual rehydration.
+    // You can remove the following line if you don't need it.
+    const unsubHydrate = useBoundStore.persist.onHydrate(() => setHydrated(false))
+
+    const unsubFinishHydration = useBoundStore.persist.onFinishHydration(() => setHydrated(true))
+
+    setHydrated(useBoundStore.persist.hasHydrated())
+
+    return () => {
+      unsubHydrate()
+      unsubFinishHydration()
+    }
+  }, [])
+
+  return hydrated
+}
+```
+
+How can I use a custom storage engine
+
+If the storage you want to use does not match the expected API, you can create your own storage:
+
+```ts
+import { create } from 'zustand'
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
+import { get, set, del } from 'idb-keyval' // can use anything: IndexedDB, Ionic Storage, etc.
+
+// Custom storage object
+const storage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    console.log(name, 'has been retrieved')
+    return (await get(name)) || null
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    console.log(name, 'with value', value, 'has been saved')
+    await set(name, value)
+  },
+  removeItem: async (name: string): Promise<void> => {
+    console.log(name, 'has been deleted')
+    await del(name)
+  },
+}
+
+export const useBoundStore = create(
+  persist(
+    (set, get) => ({
+      bears: 0,
+      addABear: () => set({ bears: get().bears + 1 }),
+    }),
+    {
+      name: 'food-storage', // unique name
+      storage: createJSONStorage(() => storage),
+    },
+  ),
+)
+```
+
+If you're using a type that `JSON.stringify()` doesn't support, you'll need to write your own serialization/deserialization code. However, if this is tedious, you can use third-party libraries to serialize and deserialize different types of data.
+
+For example, [Superjson](https://github.com/blitz-js/superjson) can serialize data along with its type, allowing the data to be parsed back to its original type upon deserialization
+
+```ts
+import superjson from 'superjson' //  can use anything: serialize-javascript, devalue, etc.
+import { PersistStorage } from 'zustand/middleware'
+
+interface BearState {
+  bear: Map<string, string>
+  fish: Set<string>
+  time: Date
+  query: RegExp
+}
+
+const storage: PersistStorage<BearState> = {
+  getItem: (name) => {
+    const str = localStorage.getItem(name)
+    if (!str) return null
+    return superjson.parse(str)
+  },
+  setItem: (name, value) => {
+    localStorage.setItem(name, superjson.stringify(value))
+  },
+  removeItem: (name) => localStorage.removeItem(name),
+}
+
+const initialState: BearState = {
+  bear: new Map(),
+  fish: new Set(),
+  time: new Date(),
+  query: new RegExp(''),
+}
+
+export const useBearStore = create<BearState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      // ...
+    }),
+    {
+      name: 'food-storage',
+      storage,
+    },
+  ),
+)
+```
+
+How can I rehydrate on storage event
+
+You can use the Persist API to create your own implementation, similar to the example below:
+
+```ts
+type StoreWithPersist = Mutate<StoreApi<State>, [["zustand/persist", unknown]]>
+
+export const withStorageDOMEvents = (store: StoreWithPersist) => {
+  const storageEventCallback = (e: StorageEvent) => {
+    if (e.key === store.persist.getOptions().name && e.newValue) {
+      store.persist.rehydrate()
+    }
+  }
+
+  window.addEventListener('storage', storageEventCallback)
+
+  return () => {
+    window.removeEventListener('storage', storageEventCallback)
+  }
+}
+
+const useBoundStore = create(persist(...))
+withStorageDOMEvents(useBoundStore)
+```
+
+How do I use it with TypeScript
+
+Basic typescript usage doesn't require anything special except for writing `create<State>()(...)` instead of `create(...)`.
+
+```tsx
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+
+interface MyState {
+  bears: number
+  addABear: () => void
+}
+
+export const useBearStore = create<MyState>()(
+  persist(
+    (set, get) => ({
+      bears: 0,
+      addABear: () => set({ bears: get().bears + 1 }),
+    }),
+    {
+      name: 'food-storage', // name of item in the storage (must be unique)
+      storage: createJSONStorage(() => sessionStorage), // (optional) by default the 'localStorage' is used
+      partialize: (state) => ({ bears: state.bears }),
+    },
+  ),
+)
+```
+
+How do I use it with Map and Set
+
+In order to persist object types such as `Map` and `Set`, they will need to be converted to JSON-serializable types such as an `Array` which can be done by defining a custom `storage` engine.
+
+Let's say your state uses `Map` to handle a list of `transactions`, then you can convert the `Map` into an `Array` in the `storage` prop which is shown below:
+
+```ts
+interface BearState {
+  .
+  .
+  .
+  transactions: Map<any>
+}
+
+  storage: {
+    getItem: (name) => {
+      const str = localStorage.getItem(name);
+      if (!str) return null;
+      const { state } = JSON.parse(str);
+      return {
+        state: {
+          ...state,
+          transactions: new Map(state.transactions),
+        },
+      }
+    },
+    setItem: (name, newValue: StorageValue<BearState>) => {
+      // functions cannot be JSON encoded
+      const str = JSON.stringify({
+        state: {
+          ...newValue.state,
+          transactions: Array.from(newValue.state.transactions.entries()),
+        },
+      })
+      localStorage.setItem(name, str)
+    },
+    removeItem: (name) => localStorage.removeItem(name),
+  },
+```
+
