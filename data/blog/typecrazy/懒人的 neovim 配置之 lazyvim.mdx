@@ -1,0 +1,364 @@
+---
+title: '懒人的 Neovim 配置之 LazyVim'
+date: '2024-09-18'
+lastmod: '2024-09-18'
+tags: []
+draft: false
+summary: ''
+---
+
+![The LazyVim launcher in neovim with a bunch of useful options](https://www.barbarianmeetscoding.com/static/51c339893c7c8e9191182e5596cf812f/b4972/lazyvim.png)
+
+LazyVim 是一种轻量级的 Neovim 配置，它在灵活的配置和预制的 neovim 发行版之间提供了最佳平衡点。LazyVim 为你提供扎实的 IDE 开发体验，但也提供了一种灵活的方式来扩展和配置它以满足你自己的需求。
+
+LazyVim:LazyVim 文档是开始使用 LazyVim 的好方法：
+
+- [LazyVim 入门](https://www.lazyvim.org/)
+- [ 安装 LazyVim](https://www.lazyvim.org/installation)
+- [ LazyVim 内置键盘映射](https://www.lazyvim.org/keymaps)
+
+如果你喜欢一个好的视频，[@elijahmanor](https://twitter.com/elijahmanor) 对 LazyVim 有一个很好的介绍：
+
+<iframe width="778" height="440" src="https://www.youtube.com/embed/N93cTbtLCIM" title="Zero to IDE with LazyVim" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+LazyVim 安装后附带：
+
+- .`config/nvim/lua` 目录中的初始配置
+  - `config` 目录，其中包含：
+    - `lazy.lua` 文件，用于提升 LazyVim
+    - `keymaps.lua` 文件，你可以在其中添加自定义键映射
+    - `autocmd.lua` 文件，你可以在其中添加自定义自动命令
+    - `options.lua` 文件，你可以在其中设置自定义 neovim 选项
+  - `plugins` 目录，你可以在其中添加新插件或配置内置插件。你在此目录下添加的任何文件都将在你打开 Neovim 时加载。建议为每个要添加和配置的插件创建一个文件。该目录包含一个 `example.lua` 文件，其中包含许多你可以使用的示例配置。
+- `.config/nvim/init.lua` 文件，用于加载 `config` 目录
+- 在 unix-like 系统上，你的 neovim 数据目录（在 neovim 的文档中称为 `$XDG_DATA_HOME）`中安装了一些插件，该目录位于 `~/.local/shared/nvim` 下。
+
+## 启动
+
+我发现启动器真正有用的两件事是：
+
+- `c` 直接跳转到 neovim 配置
+- `s` 恢复上一个会话
+
+## lazy.nvim
+
+在后台，LazyVim 依靠 lazy.nvim 插件管理器管理所有插件。花些时间了解 lazy.nvim 是什么以及它的工作原理很有用。
+
+lazy.nvim 是一个现代的 Neovim 插件管理器，具有内置 UI，能够延迟加载插件和 Lua 模块，即只在需要时加载。对于插件，你可以配置根据事件、命令、文件类型或键映射来决定是否加载。模块也是在需要时加载。
+
+一般来说，使用 lazy.nvim 时，如果满足以下条件之一，插件就会被延迟加载：
+
+- 该插件仅作为 spec 中的依赖项存在
+- 它有`event`、`cmd`、`ft` 或 `keys` 键
+- `config.defaults.lazy == true`
+
+### 在 lazy.nvim 中配置插件
+
+lazy.nvim 的实现是使用声明式 spec 来配置插件。[lazy.nvim](https://github.com/folke/lazy.nvim) 不需要一个插件并通过调用`设置`函数进行配置，因为它已经成为一个事实上的标准，它需要一个完全声明性的配置（或规范）。
+
+例如，不要像使用 packer 或其他插件管理器那样安装 [telescope.nvim](https://www.barbarianmeetscoding.com/notes/neovim-lazyvim/)：
+
+```lua
+-- install plugin
+use {
+  'nvim-telescope/telescope.nvim', tag = '0.1.1',
+-- or                            , branch = '0.1.x',
+  requires = { {'nvim-lua/plenary.nvim'} }
+}
+-- setup plugin
+require('telescope').setup{
+  defaults = {
+    -- default configs
+  },
+  pickers = {
+    -- Default configuration for builtin pickers goes here:
+  },
+  extensions = {
+    -- Your extension configuration goes here:
+  }
+}
+-- Setup mappings
+local builtin = require('telescope.builtin')
+vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
+```
+
+你以 Lua 表的形式编写一个声明性规范：
+
+```lua
+{
+  "nvim-telescope/telescope.nvim",
+  cmd = "Telescope",
+  version = '0.1.1', -- telescope did only one release, so use HEAD for now
+  keys = {
+    { "<leader>fb", "<cmd>Telescope buffers<cr>", desc = "Buffers" },
+    { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
+  },
+  opts = {
+    -- this is the same opts one passes to the setup() function
+    defaults = {
+      -- default configs
+    },
+    pickers = {},
+    extensions = {},
+  },
+}
+```
+
+当你加载 neovim 时，望远镜插件不会立即加载。但是一旦你键入 [lazy.nvim](https://github.com/folke/lazy.nvim) 规范中定义的任何键，望远镜就会被加载并执行。
+
+###  Lazy.nvim 用户界面
+
+[lazy.nvim](https://github.com/folke/lazy.nvim) 的一个非常方便的功能是它的 UI。键入 `<leader>l` 即可访问一个简单但非常全面的 UI，你可以在其中安装、更新、调试、分析、卸载和查看你最喜爱的插件的最新功能。（提示：在 [lazy.nvim](https://github.com/folke/lazy.nvim) UI 中键入 `？`以获得有关如何使用它的帮助）
+
+![The lazy.nvim UI showing a collection of plugins, some of which need to be updated](https://user-images.githubusercontent.com/292349/208301737-68fb279c-ba70-43ef-a369-8c3e8367d6b1.png)
+
+###  lazy.nvim 的其他功能
+
+- 由于 Lua 模块的自动缓存和字节码编译，启动时间很短
+- 在启动 Neovim 之前自动安装缺少的插件，让你立即开始使用
+- 异步执行以提高性能
+- 无需手动编译插件
+- 为没有 vimdocs 的插件生成 `README.md` 文件中标题的 helptags
+- 使用本地插件的开发选项和模式
+- 用于优化性能的分析工具
+- `Lockfile lazy-lock.json` 以跟踪已安装的插件
+- 自动检查更新
+- 提交、分支、标签、版本和完整的 Semver 支持
+- Statusline 组件查看待处理更新的数量
+- 自动延迟加载配色方案
+
+###  安装
+
+要在 LazyVim 之外安装 [lazy.nvim](https://github.com/folke/lazy.nvim)，[请查看文档](https://github.com/folke/lazy.nvim#-installation)。
+
+##  学习键映射
+
+开始使用 LazyVim（作为 neovim 的新手或经验丰富的 vim 用户）可能是一个相当复杂的学习曲线，其中包含所有插件和内置映射。幸运的是，LazyVim 附带了几个插件，可以很容易地发现如何与不同功能交互的新映射：[which-key](https://github.com/folke/which-key.nvim) 和 [telescope](https://github.com/nvim-telescope/telescope.nvim)。
+
+[which-key](https://github.com/folke/which-key.nvim) 是Neovim 插件，它显示一个弹出窗口，其中包含你开始键入的命令的可能键绑定。因此，如果你对给定的映射不太确定，可以先键入 `<leader>` 键，然后看到弹出窗口，其中包含你可以键入的新键的建议：
+
+[![A which key popup showing different commands you can type](https://www.barbarianmeetscoding.com/static/7c95713ec29e9df577b02d5ed7577b07/fcda8/which-key.png)](https://www.barbarianmeetscoding.com/static/7c95713ec29e9df577b02d5ed7577b07/51ed8/which-key.png)
+
+但是如果你不知道该输入什么，你可以试试运气，使用 `：telescope 键盘映射`选择器，也可以通过 `<leader>sk` 获得 “搜索键”。假设我们想了解是否有任何用于关闭通知的映射。因此，我们打开望远镜选择器并键入 `notification`，它将显示 `<leader>un` 映射到 “删除所有通知”。
+
+最后，你可以随时查看 [LazyVim 文档](https://www.lazyvim.org/keymaps)（其中有很多相关的映射）。
+
+## 与通知交互
+
+通知有时可能有点烦人，尤其是当它们隐藏源代码时。你可以键入 `<leader>un` 来删除所有通知。
+
+##  自定义配置
+
+###  映射
+
+在使用 vim 和 neovim 多年之后，我离不开一些映射。幸运的是，LazyVim 提供了`config/keymaps.lua`，可以在其中放置他们的自定义映射：
+
+```lua
+-- Keymaps are automatically loaded on the VeryLazy event
+-- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
+-- Add any additional keymaps here
+-- exit insert mode with jk
+vim.keymap.set("i", "jk", "<ESC>", { noremap = true, silent = true, desc = "<ESC>" })
+
+-- Perusing code faster with K and J
+vim.keymap.set({ "n", "v" }, "K", "5k", { noremap = true, desc = "Up faster" })
+vim.keymap.set({ "n", "v" }, "J", "5j", { noremap = true, desc = "Down faster" })
+
+-- Remap K and J
+vim.keymap.set({ "n", "v" }, "<leader>k", "K", { noremap = true, desc = "Keyword" })
+vim.keymap.set({ "n", "v" }, "<leader>j", "J", { noremap = true, desc = "Join lines" })
+
+-- C-P classic
+vim.keymap.set("n", "<C-P>", "<leader>ff")
+
+-- Save file
+vim.keymap.set("n", "<leader>w", "<cmd>w<cr>", { noremap = true, desc = "Save window" })
+
+-- Unmap mappings used by tmux plugin
+-- TODO(vintharas): There's likely a better way to do this.
+vim.keymap.del("n", "<C-h>")
+vim.keymap.del("n", "<C-j>")
+vim.keymap.del("n", "<C-k>")
+vim.keymap.del("n", "<C-l>")
+vim.keymap.set("n", "<C-h>", "<cmd>TmuxNavigateLeft<cr>")
+vim.keymap.set("n", "<C-j>", "<cmd>TmuxNavigateDown<cr>")
+vim.keymap.set("n", "<C-k>", "<cmd>TmuxNavigateUp<cr>")
+vim.keymap.set("n", "<C-l>", "<cmd>TmuxNavigateRight<cr>")
+```
+
+###  自定义 nvim-cmp 配置
+
+除了这些映射之外，我还自定义了 `nvim-cmp`，以便我可以在 `<TAB>` 上自动完成，既用于触发完成，也可用于选择项目（或在代码片段的字段之间跳转）。在 LazyVim 发行版中配置 `nvim-cmp` 和其他插件的方式对我来说有点奇怪：
+
+```lua
+-- nvim-cmp configs
+return {
+  -- customize nvim-cmp configs
+  -- Use <tab> for completion and snippets (supertab)
+  -- first: disable default <tab> and <s-tab> behavior in LuaSnip
+  {
+    "L3MON4D3/LuaSnip",
+    keys = function()
+      return {}
+    end,
+  },
+  -- then: setup supertab in cmp
+  {
+    "hrsh7th/nvim-cmp",
+    dependencies = {
+      "hrsh7th/cmp-emoji",
+    },
+    ---@param opts cmp.ConfigSchema
+    opts = function(_, opts)
+      local has_words_before = function()
+        unpack = unpack or table.unpack
+        local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+        return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
+      end
+
+      local luasnip = require("luasnip")
+      local cmp = require("cmp")
+
+      -- This is reaaaally not easy to setup :D
+      opts.mapping = vim.tbl_extend("force", opts.mapping, {
+        ["<Tab>"] = cmp.mapping(function(fallback)
+          -- If it's a snippet then jump between fields
+          if luasnip.expand_or_jumpable() then
+            luasnip.expand_or_jump()
+          -- otherwise if the completion pop is visible then complete
+          elseif cmp.visible() then
+            cmp.confirm({ select = false })
+          -- if the popup is not visible then open the popup
+          elseif has_words_before() then
+            cmp.complete()
+          -- otherwise fallback
+          else
+            fallback()
+          end
+        end, { "i", "s" }),
+        ["<S-Tab>"] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.select_prev_item()
+          elseif luasnip.jumpable(-1) then
+            luasnip.jump(-1)
+          else
+            fallback()
+          end
+        end, { "i", "s" }),
+      })
+    end,
+  },
+}
+```
+
+###  自定义望远镜配置
+
+我自定义了望远镜，以便我可以启用 fzf 排序器，并拥有一些我已经习惯了在早期使用 fzf 的映射：
+
+```lua
+return {
+  {
+    "nvim-telescope/telescope.nvim",
+    -- install fzf native
+    dependencies = {
+      "nvim-telescope/telescope-fzf-native.nvim",
+      build = "make",
+      config = function()
+        require("telescope").load_extension("fzf")
+      end,
+    },
+    keys = {
+      -- change a keymap
+      { "<C-p>", "<cmd>Telescope find_files<CR>", desc = "Find Files" },
+      -- add a keymap to browse plugin files
+      {
+        "<leader>fp",
+        function()
+          require("telescope.builtin").find_files({ cwd = require("lazy.core.config").options.root })
+        end,
+        desc = "Find Plugin File",
+      },
+      -- This is using b because it used to be fzf's :Buffers
+      {
+        "<leader>b",
+        "<cmd>Telescope oldfiles<cr>",
+        desc = "Recent",
+      },
+    },
+  },
+}
+```
+
+##  其他插件
+
+到目前为止，我一直在安装这些额外的插件：
+
+```lua
+-- Highlight YAML front matter
+vim.api.nvim_set_var("vim_markdown_frontmatter ", 1)
+
+return {
+  -- tmux vim
+  { "christoomey/vim-tmux-navigator" },
+
+  -- markdown support
+  { "godlygeek/tabular" }, -- required by vim-markdown
+  { "plasticboy/vim-markdown" },
+}
+```
+
+## 其他配置提示
+
+LazyVim 文档提供了许多[提示](https://www.lazyvim.org/configuration/tips)和[配方](https://www.lazyvim.org/configuration/recipes)，以及有关如何使用和增强 LazyVim 和 neovim 体验的其他信息。我最喜欢的一些：
+
+-  移动文件
+  - LazyVim 使用 [bufferline](https://github.com/akinsho/bufferline.nvim) 以类似 tab 的方式排列缓冲区，并提供一些很好的视觉提示，说明文件是否处于活动状态和 / 或是否已以某种方式被修改。除了 UI 更改之外，bufferline 还添加了许多映射，以便在缓冲区之间快速跳转。你可以使用 `H` 和 `L` 跳转到缓冲区行中显示的打开缓冲区，使用 `H` 跳转到左侧的缓冲区，使用 `L` 跳转到右侧的缓冲区。
+  - 使用 telescope 在其他文件之间跳转：
+    - 如果要对开放缓冲区进行模糊搜索，请使用 `<leader>，`
+    - 要对任何文件进行模糊搜索，请使用 `<leader><space>`
+-  使用缓冲区的操作
+  - `<leader>bb` 切换到其他缓冲区
+  - `<leader>bd` 删除不再需要的缓冲区
+  - `<leader>bp` 切换缓冲区的固定
+  - `<leader>bP` 删除非固定缓冲区
+- 跳转到文件中的定义
+  - 使用 `<leader>ss` 转到 symbol 将打开使用望远镜对文件中的所有元件进行模糊搜索
+  - `<C-o>`、`<C-i>` 和 `gd` 导航代码
+
+##  额外
+
+[Lazyvim](http://www.lazyvim.org/) 附带了许多附加功能，你可以在配置中选择加入：
+
+- [ 副驾驶员](https://www.lazyvim.org/plugins/extras/coding.copilot)
+- [ 漂亮](https://www.lazyvim.org/plugins/extras/formatting.prettier)
+
+###  副驾驶员
+
+安装 Lazyvim 的 [Copilot](https://www.barbarianmeetscoding.com/notes/neovim-lazyvim/) 确实是一件轻而易举的事。[将额外的导入添加到你的 lazy.lua 配置](https://www.lazyvim.org/plugins/extras/coding.copilot)和集合中。下次打开 neovim 时，系统会提示你登录你的 copilot 帐户。你可能需要更新 copilot 配置，在 `config/plugins` 目录中添加 `copilot.lua` 文件：
+
+```lua
+-- ~/.config/nvim/lua/plugins/copilot.lua
+-- copilot configuration
+return {
+  "zbirenbaum/copilot.lua",
+  opts = {
+    -- These are disabled in the default configuration.
+    suggestion = { enabled = true },
+    panel = { enabled = true },
+  },
+}
+-- For additional configurations for the copilot panel, suggestions, filetypes supported, etc 
+-- see https://github.com/zbirenbaum/copilot.lua
+```
+
+Lazyvim copilot 的支持来自两个插件：
+
+- [zbirenbaum/copilot.lua](https://www.barbarianmeetscoding.com/notes/neovim-lazyvim/zbirenbaum/copilot.lua)，一个用 Lua 编写的 Neovim 的 Copilot 客户端
+- [zbirenbaum/copilot-cmp](https://github.com/zbirenbaum/copilot-cmp)，它向 [NVIM-CMP](https://github.com/hrsh7th/nvim-cmp) 添加了copilot 源。
+
+它还向 lualine 添加了copilot 图标，告诉你 copilot 何时可用并正在运行（或者你可以运行 `：Copilot` 命令）。
+
+有关 copilot 面板的其他配置、建议、支持的文件类型等，请查看 [zbirenbaum/copilot.lua](https://github.com/zbirenbaum/copilot.lua) 文档。
+
+##  

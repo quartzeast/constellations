@@ -1,0 +1,143 @@
+---
+title: 使用 Go 实现一个秒杀系统
+date: 2024-9-21
+lastmod: 2024-9-21
+tags: ['Go']
+draft: false
+summary: 使用 Go 实现一个秒杀系统，讲解秒杀系统的设计思路和实现细节。
+---
+
+## 系统架构设计
+
+系统需求分析：
+
+- 前端页面需要承载大流量
+- 在大并发状态下要解决超卖问题
+- 后端接口需要满足横向扩展
+
+![系统架构](https://cdn.jsdelivr.net/gh/quartzeast/constellations-blog-images@main/img/2024%2F09%2F21%2F20240921-102940.webp)
+
+## 初识 RabbitMQ
+
+### RabbitMQ 环境准备
+
+RabbitMQ 定义和特征：
+
+- RabbitMQ 是面向消息的中间件，用于组件之间的解耦，主要体现在消息的发送者和消费者之间无强依赖关系。
+
+- RabbitMQ 的特点：高可用、扩展性、多语言客户端、管理界面等
+
+- 主要使用场景：流量削峰、异步处理、应用解耦
+
+RabbitMQ 环境准备：
+
+- 参考官方文档，采用 Docker 进行快速启动：[Installing RabbitMQ](https://www.rabbitmq.com/docs/download)
+
+  ```shell
+  # latest RabbitMQ 3.13
+  docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13-management
+  ```
+
+### RabbitMQ 快速入门
+
+- RabbitMQ 简单管理命令
+
+  ```shell
+  # 启动 rabbitmq
+  systemctl start rabbitmq-server
+  
+  # 停止 rabbitmq
+  rabbitmqctl stop
+  
+  # 插件管理命令
+  rabbitmq-plugins list
+  
+  # 安装 web 管理界面
+  rabbitmq-plugins enable rabbitmq_management
+  
+  # 卸载插件
+  rabbitmq-plugins disable rabbitmq_tracing
+  ```
+
+- RabbitMQ 核心概念
+
+  - Virtual Host
+  - Connection
+  - Exchange
+  - Channel
+  - Queue
+  - Binding
+
+- RabbitMQ 常用工作模式
+
+  - Simple 模式
+
+    最简单常用的模式
+
+    1. 创建 Simple 模式下的 RabbitMQ
+
+       ```go
+       package rabbitmq
+       
+       import (
+       	"log"
+       
+       	"github.com/streadway/amqp"
+       )
+       
+       // url 格式：amqp://账号:密码@ip:端口/vhost
+       const MQURL = "amqp://quartzeast:quartzeast@localhost:5672/quartzeast"
+       
+       type RabbitMQ struct {
+       	conn         *amqp.Connection
+       	channel      *amqp.Channel
+       	QueueName    string // 队列名称
+       	ExchangeName string // 交换机名称
+       	Key          string // key
+       	MQURL        string // 连接信息
+       }
+       
+       // NewRabbitMQ 创建 RabbitMQ 实例
+       func NewRabbitMQ(queueName, exchangeName, key string) *RabbitMQ {
+       	rabbitmq := &RabbitMQ{
+       		QueueName:    queueName,
+       		ExchangeName: exchangeName,
+       		Key:          key,
+       		MQURL:        MQURL,
+       	}
+       
+       	var err error
+       	rabbitmq.conn, err = amqp.Dial(rabbitmq.MQURL)
+       	rabbitmq.failOnError(err, "failed to connect rabbitmq!")
+       	rabbitmq.channel, err = rabbitmq.conn.Channel()
+       	rabbitmq.failOnError(err, "failed to open a channel!")
+       	return rabbitmq
+       }
+       
+       // Destory 关闭 channel 和 connection
+       func (r *RabbitMQ) Destory() {
+       	r.channel.Close()
+       	r.conn.Close()
+       }
+       
+       // failOnError 错误处理函数
+       func (r *RabbitMQ) failOnError(err error, msg string) {
+       	if err != nil {
+       		log.Panicf("%s: %s", msg, err)
+       	}
+       }
+       
+       // NewRabbitMQSimple 创建 Simple 模式下的 RabbitMQ 实例
+       func NewRabbitMQSimple(queueName string) *RabbitMQ {
+       	// simple 模式下，exchangeName 和 key 都默认为空
+       	return NewRabbitMQ(queueName, "", "")
+       }
+       
+       ```
+
+  - Work 模式
+
+  - Routing 模式
+
+  - Publish 模式
+

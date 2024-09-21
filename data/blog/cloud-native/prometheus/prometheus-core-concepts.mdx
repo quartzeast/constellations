@@ -1,0 +1,323 @@
+---
+title: 'Prometheus 核心概念'
+date: '2023-08-05'
+lastmod: '2023-08-05'
+tags: ['Docker']
+draft: false
+summary: 'Prometheus 是一个开源的监控和告警工具，它可以帮助我们监控应用和基础设施。本文将介绍 Prometheus 的核心概念，包括数据模型、指标类型、作业和实例。'
+---
+
+Prometheus 是一个开源的监控和告警工具，它可以帮助我们监控应用和基础设施。Prometheus 通过拉取（pull）的方式从目标中抓取指标数据，然后存储这些数据，并提供查询语言（PromQL）来查询这些数据。Prometheus 还提供了告警功能，可以在满足一定条件时发送告警通知。
+
+本文将介绍 Prometheus 的基本术语和核心概念，包括数据模型、指标类型、作业和实例。
+
+## 基本术语
+
+### Metric
+
+指标（metric）即指数字度量（numerical measurements）。时间序列是指**随时间变化的记录**。用户希望测量的东西会根据不同的应用而变化。对于一个 web 服务器来说，它可能是请求时间；对于一个数据库来说，它可能是活跃的连接数或活跃的查询数。
+
+指标在理解你的应用为何以某种方式运行时起着重要作用。假设你正在运行一个 web 应用，并发现它速度很慢。要了解你的应用发生了什么，你需要一些信息。例如，当请求数量很高时，应用可能会变得缓慢。如果你拥有请求计数指标，你可以确定原因并增加服务器数量以处理负载。
+
+### Alert
+
+告警是 Prometheus 中正在触发的告警规则的结果。告警从 Prometheus 发送到 Alertmanager。
+
+### Alertmanager
+
+Alertmanager 接收告警，将其聚合成组，去重，应用静默（silence），限流，然后将通知发送到电子邮件、PagerDuty、Slack 等。
+
+### Bridge
+
+桥是一个组件，它从客户端库中获取样本并将其暴露给非 Prometheus 监控系统。例如，Python、Go 和 Java 客户端可以将指标导出到 Graphite。
+
+### Client library
+
+客户端库是某种语言（例如 Go、Java、Python、Ruby）中的一个库，它使你能够轻松地直接对代码进行仪器化，编写自定义收集器以从其他系统提取指标，并将指标暴露给 Prometheus。
+
+### Collector
+
+收集器是一个导出器的一部分，代表一组指标。如果它是直接仪器的一部分，则可能是单个指标；如果它从另一个系统提取指标，则可能是多个指标。
+
+### Direct instrumentation
+
+直接仪器是作为程序源代码一部分的内联添加的仪器，使用客户端库。
+
+### Endpoint
+
+可以抓取的指标来源，通常对应于单个过程。
+
+### Exporter
+
+导出器是一个与你想要获取指标的应用程序并行运行的二进制文件。导出器暴露 Prometheus 指标，通常通过将以非 Prometheus 格式暴露的指标转换为 Prometheus 支持的格式。
+
+### Instance
+
+实例是一个唯一标识作业中目标的标签。
+
+### Job
+
+一组具有相同目的的目标，例如监控一组为可扩展性或可靠性而复制的类似进程，称为作业。
+
+### Notification
+
+通知表示一个或多个警报的组，由 Alertmanager 发送到电子邮件、Pagerduty、Slack 等。
+
+### Promdash
+
+Promdash 是一个用于 Prometheus 的本地仪表板构建器。它已被弃用并被 Grafana 替代。
+
+### Prometheu
+
+Prometheus 通常指的是 Prometheus 系统的核心二进制文件。它也可能指整个 Prometheus 监控系统。
+
+### PromQL
+
+PromQL 是 Prometheus 查询语言。它允许进行广泛的操作，包括聚合、切片（slicing）和切块（dicing）、预测（prediction）和连接（joins）。
+
+### Pushgateway
+
+Pushgateway 持久化批处理作业的最新指标推送。这允许 Prometheus 在它们终止后抓取它们的指标。
+
+### Recording Rules
+
+记录规则预计算频繁需要或计算成本高的表达式，并将其结果保存为一组新的时间序列。
+
+### Remote Read
+
+远程读取是 Prometheus 的一项功能，允许在查询中透明地从其他系统（例如长期存储）读取时间序列。
+
+### Remote Read Adapter
+
+并非所有系统都直接支持远程读取。远程读取适配器位于 Prometheus 和另一个系统之间，负责在它们之间转换时间序列请求和响应。
+
+### Remote Read Endpoint
+
+远程读取端点是 Prometheus 在进行远程读取时所连接的对象。
+
+### Remote Write
+
+远程写入是 Prometheus 的一项功能，允许将实时采集的样本发送到其他系统，例如长期存储。
+
+### Remote Write Adapter
+
+并非所有系统都直接支持远程写入。远程写入适配器位于 Prometheus 和另一个系统之间，将远程写入中的样本转换为另一个系统可以理解的格式。
+
+### Remote Write Endpoint
+
+远程写入端点是 Prometheus 在进行远程写入时所连接的对象。
+
+### Sample
+
+样本是在时间序列中某一时刻的单个值。
+
+在 Prometheus 中，每个样本由一个 float64 值和一个毫秒级精度的时间戳组成。
+
+### Silence
+
+在 Alertmanager 中的静默会阻止与静默匹配的标签的警报被包含在通知中。
+
+### Target
+
+目标是要抓取的对象的定义。例如，应用哪些标签、连接所需的任何身份验证或其他定义抓取将如何进行的信息。
+
+### Time Series
+
+Prometheus 时间序列数据是属于同一指标和同一组标签维度的带时间戳的数据流。Prometheus 将所有数据存储为时间序列。
+
+## 数据模型
+
+Prometheus 本质上将所有数据存储为时序数据：属于同一指标（metric）和同一组标签维度的带时间戳的数据流。除了存储的时间序列，Prometheus 还可以临时生成派生的时间序列，作为查询的结果。
+
+### 指标名和标签🏷
+
+每个时间序列都由其指标名和可选的键值对（称为标签）唯一标识。
+
+**指标名**：
+
+- 指定要测量的系统的一般特征（例如 `http_requests_total` - 接收到的 HTTP 请求总数）。
+- 指标名可以包含 ASCII 字母、数字、下划线和冒号。它必须与正则表达式 `[a-zA-Z_:][a-zA-Z0-9_:]*` 匹配。
+
+**标签**：
+
+- 开启 Prometheus 的维度数据模型，以识别相同指标名称的任何给定标签组合。它识别该指标的特定维度实例化（例如：所有使用方法 `POST` 的 HTTP 请求到 `/api/tracks` 处理程序）。查询语言允许基于这些维度进行过滤和聚合。
+- 任何标签值的更改，包括添加或删除标签，将创建一个新的时间序列。
+- 标签可以包含 ASCII 字母、数字以及下划线。它们必须匹配正则表达式 `[a-zA-Z_][a-zA-Z0-9_]*` 。
+- 以 `__` 开头的标签名称保留供内部使用。
+- 标签值可以包含任何 Unicode 字符。
+- 标签值为空的标签被视为与不存在的标签等效。
+
+### 样本🧪
+
+样本来自实际的时间序列数据。每个样本由以下部分组成：
+
+- 一个 float64 值
+- 毫秒级精度时间戳
+
+### 标记法
+
+给定一个指标名和一组标签，时间序列通常使用以下标记法进行标识：
+
+```
+<metric name>{<label name>=<label value>, ...}
+```
+
+例如，一个具有指标名称 `api_http_requests_total` 和标签 `method="POST"` 和 `handler="/messages"` 的时间序列可以这样写：
+
+```
+api_http_requests_total{method="POST", handler="/messages"}
+```
+
+这是 OpenTSDB 使用的相同标记法。
+
+## 指标类型
+
+Prometheus 客户端库提供四种核心指标。这些指标类型目前仅在传输协议和客户端库中区分（以便启用针对特定类型使用的 API）。Prometheus 服务器尚未利用类型信息，并将所有数据扁平化为无类型时间序列。
+
+### Counter
+
+_Counter_ 是一个累积指标（cumulative metric），表示一个单调递增的计数器，其值只能增加或在重启时重置为零。例如，你可以使用 Counter 来表示服务的请求数量、完成的任务或错误数量。
+
+不要使用 Counter 来暴露可能减少的值。例如，不要使用 Counter 来表示当前正在运行的进程数量，而应该使用 _Gauge_。
+
+Counter 的客户端库使用文档：
+
+- [Go](http://godoc.org/github.com/prometheus/client_golang/prometheus#Counter)
+- [Java](https://github.com/prometheus/client_java#counter)
+- [Python](https://prometheus.github.io/client_python/instrumenting/counter/)
+- [Ruby](https://github.com/prometheus/client_ruby#counter)
+- [.Net](https://github.com/prometheus-net/prometheus-net#counters)
+
+### Gauge
+
+_Gauge_ 这个指标是用来表示可能会波动的数据。
+
+Gauge 通常用于测量值，如温度或当前内存使用情况，但也用于可以上下波动的「计数」，例如并发请求的数量。
+
+Gauge 的客户端使用文档：
+
+- [Go](http://godoc.org/github.com/prometheus/client_golang/prometheus#Gauge)
+- [Java](https://github.com/prometheus/client_java#gauge)
+- [Python](https://prometheus.github.io/client_python/instrumenting/gauge/)
+- [Ruby](https://github.com/prometheus/client_ruby#gauge)
+- [.Net](https://github.com/prometheus-net/prometheus-net#gauges)
+
+### Histogram
+
+直方图样本观察（通常是请求持续时间或响应大小等）并将其计入可配置的桶中。它还提供所有观察值的总和。
+
+一个基准度量名称为 `<basename>` 的直方图在抓取期间暴露多个时间序列：
+
+- 观察桶的累积 counter，暴露为 `<basename>_bucket{le="<upper inclusive bound>"}`
+- 所有观察值的总和，显示为 `<basename>_sum`
+- 观察到的事件数量，显示为 `<basename>_count` （与上述 `<basename>_bucket{le="+Inf"}` 相同）
+
+使用 `histogram_quantile()` 函数从直方图或直方图的聚合中计算分位数。直方图也适合计算 Apdex 评分。在对桶进行操作时，请记住直方图是累积的。有关直方图的使用和与摘要的区别，请参见直方图和摘要。
+
+Histograms in Prometheus are a type of metric used to track the distribution of observed values, typically for measuring request durations or response sizes. They allow you to categorize and count observations into configurable buckets, providing a detailed view of how measurements are distributed over time.
+
+在 Prometheus 中，直方图是一种用于跟踪观察值分布的指标，通常用于测量请求持续时间或响应大小。它们允许您将观察结果分类并计入可配置的桶中，提供了对测量随时间分布的详细视图。
+
+## Key Features of Prometheus Histograms
+
+Bucketed Observations
+
+- **Buckets**: Histograms divide the range of observed values into a series of intervals called buckets. Each bucket counts how many observations fall within its range. For instance, if a histogram is tracking response times, it might have buckets for ranges like 0.1 seconds, 0.2 seconds, etc.
+- **Cumulative Counts**: Each bucket in a histogram is cumulative, meaning that the count for a bucket includes all counts from lower buckets. This allows for easy aggregation and analysis of data across different instances or applications.
+
+***\*Metric Components\****A Prometheus histogram consists of three main components:
+
+- **_count**: A counter that tracks the total number of observations.
+- **_sum**: A counter that tracks the total sum of all observed values.
+- **Buckets**: Each bucket is represented as a separate time series with a label indicating its upper boundary (denoted as `le`, which stands for "less than or equal"). For example, a bucket labeled `le="0.1"` would count all observations that are less than or equal to 0.1 seconds.
+
+## Usage and Querying
+
+Histograms are particularly useful for calculating quantiles and percentiles, which can be done using the `histogram_quantile()` function in Prometheus. This function allows you to estimate quantiles based on the data in the histogram's buckets.For example, to calculate the 90th percentile latency from a histogram named `http_request_duration_seconds`, you would use:
+
+```
+text
+histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+```
+
+This query sums the counts from each bucket over a 5-minute window and calculates the 90th percentile latency based on those counts.
+
+## Advantages and Disadvantages
+
+## Advantages:
+
+- **Performance**: Histograms are efficient because they only require counters for each bucket, making them lightweight in terms of resource usage.
+- **Aggregation**: They can be aggregated across multiple instances or time windows, allowing for comprehensive analysis of performance metrics across distributed systems.
+
+## Disadvantages:
+
+- **Predefined Buckets**: The need to define buckets ahead of time can be limiting. If the buckets do not align well with the observed data distribution, it can lead to inaccurate quantile calculations or wasted resources.
+- **Approximate Percentiles**: While histograms provide good estimates of percentiles, they do not offer exact values like summaries do; this might be acceptable in many cases but could be a drawback in scenarios requiring precise metrics.
+
+In summary, histograms in Prometheus are powerful tools for monitoring and analyzing distributions of metrics such as response times and request sizes. They provide valuable insights into performance characteristics over time while allowing for efficient aggregation and querying capabilities.
+
+### Summary
+
+类似于直方图，summary samples observations（通常是请求持续时间和响应大小等内容）。虽然它还提供观察总数和所有观察值的总和，但它在滑动时间窗口内计算可配置的分位数。
+
+一个基准指标名称为 `<basename>` 的摘要在抓取期间暴露多个时间序列：
+
+- 流式 φ- 分位数（0 ≤ φ ≤ 1）观察到的事件，以 `<basename>{quantile="<φ>"}` 呈现
+- 所有观察值的总和，显示为 `<basename>_sum`
+- 观察到的事件数量，显示为 `<basename>_count`
+
+查看直方图和摘要以获取关于 φ- 分位数、摘要用法和与直方图的差异的详细解释。
+
+客户端库使用文档摘要：
+
+- [Go](http://godoc.org/github.com/prometheus/client_golang/prometheus#Summary)
+- [Java](https://github.com/prometheus/client_java#summary)
+- [Python](https://prometheus.github.io/client_python/instrumenting/summary/)
+- [Ruby](https://github.com/prometheus/client_ruby#summary)
+- [.Net](https://github.com/prometheus-net/prometheus-net#summary)
+
+## 作业和实例
+
+在普罗米修斯术语中，可以抓取的端点称为实例，通常对应于单个进程。具有相同目的的实例集合，例如为了可扩展性或可靠性而复制的进程，称为作业。
+
+例如，一个具有四个复制实例的 API 服务器作业：
+
+- 工作: `api-server`
+- 实例 1: `1.2.3.4:5670`
+- 实例 2: `1.2.3.4:5671`
+- 实例 3: `5.6.7.8:5670`
+- 实例 4: `5.6.7.8:5671`
+
+### 自动生成的标签和时间序列
+
+当普罗米修斯抓取一个目标时，它会自动附加一些标签到抓取的时间序列，这些标签用于识别被抓取的目标：
+
+- `job` : 目标所属的配置作业名称。
+- `instance` : 被抓取的目标 URL 的 `<host>:<port>` 部分。
+
+如果抓取的数据中已经存在这两个标签中的任何一个，则行为取决于 `honor_labels` 配置选项。有关更多信息，请参阅抓取配置文档。
+
+对于每个实例抓取，Prometheus 在以下时间序列中存储一个样本：
+
+- `up{job="<job-name>", instance="<instance-id>"}` : `1` 如果实例是健康的，即可访问，或者 `0` 如果抓取失败。
+- `scrape_duration_seconds{job="<job-name>", instance="<instance-id>"}` : 抓取的持续时间。
+- `scrape_samples_post_metric_relabeling{job="<job-name>", instance="<instance-id>"}` : 应用度量重新标记后剩余的样本数量。
+- `scrape_samples_scraped{job="<job-name>", instance="<instance-id>"}` : 目标暴露的样本数量。
+- `scrape_series_added{job="<job-name>", instance="<instance-id>"}` : 此次抓取中新系列的近似数量。v2.10 中的新内容
+
+`up` 时间序列对实例可用性监控非常有用。
+
+通过 `extra-scrape-metrics` 功能标志，可以获得几个额外的指标：
+
+- `scrape_timeout_seconds{job="<job-name>", instance="<instance-id>"}` : 为目标配置的 `scrape_timeout` 。
+- `scrape_sample_limit{job="<job-name>", instance="<instance-id>"}` : 为目标配置的 `sample_limit` 。如果没有配置限制，则返回零。
+- `scrape_body_size_bytes{job="<job-name>", instance="<instance-id>"}` : 最近的抓取响应的未压缩大小（如果成功）。由于超出 `body_size_limit` 而导致的抓取失败报告 -1，其他抓取失败报告 0。
+
+## 参考
+
+- [An introduction to the 4 primary types of Prometheus metrics](https://chronosphere.io/learn/an-introduction-to-the-four-primary-types-of-prometheus-metrics/)
+- [Fun with Histograms - Prometheus Basics](https://bryce.fisher-fleig.org/prometheus-histograms/)
+- [一文搞懂 Prometheus 的直方图](https://cloud.tencent.com/developer/article/1495303)
+- [How does a Prometheus Histogram work?](https://www.robustperception.io/how-does-a-prometheus-histogram-work/)
+- [A Deep Dive Into the Four Types of Prometheus Metrics](https://www.timescale.com/blog/four-types-prometheus-metrics-to-collect/)
+

@@ -1,0 +1,566 @@
+---
+title: 'MySQL 事务处理与事务隔离'
+date: '2024-09-19'
+lastmod: '2024-09-19'
+tags: ['MySQL']
+draft: false
+summary: MySQL 中事务处理的基本概念以及事务隔离的相关知识
+---
+
+在数据库中，事务处理是一种重要的机制，它可以确保数据的完整性和一致性。事务是一个操作序列，这些操作要么全部执行，要么全部不执行，它是数据库操作的最小单元。MySQL 支持事务处理，这意味着你可以在 MySQL 中执行多个 SQL 语句，并且保证这些语句要么全部执行成功，要么全部执行失败。
+
+在 MySQL 5.5 版本之前，默认存储引擎是 MyISAM。而在 5.5 版本之后，默认存储引擎变为 InnoDB。InnoDB 与 MyISAM 的区别之一是 InnoDB 支持事务，这也是 InnoDB 取代 MyISAM 的重要原因。那么，什么是事务呢？事务的英文是 transaction。从这个英文单词中可以看出，事务是进行一次处理的基本单元，要么完全执行，要么都不执行。
+
+事务保证了一次处理的完整性，也保证了数据库中的数据一致性。它是一种高级的数据处理方式，如果我们在增加、删除、修改的时候某一个环节出了错，它允许我们回滚还原。正是因为这个特点，事务非常适合应用在安全性高的场景里，比如金融行业等。
+
+## 事务的特性
+
+在数据库中，事务是指一组 SQL 语句，这些 SQL 语句要么全部执行成功，要么全部执行失败。事务是数据库操作的最小单元，它具有以下四个特性，通常称为 ACID 特性：
+
+- **原子性（Atomicity）**：原子的概念就是不可分割，你可以把它理解为组成物质的基本单位，也是我们进行数据处理操作的基本单位。
+- **一致性（Consistency）**：一致性指的就是数据库在进行事务操作后，会由原来的一致状态，变成另一种一致的状态。也就是说当事务提交后，或者当事务发生回滚后，数据库的完整性约束不能被破坏。
+- **隔离性（Isolation）**：每个事务都是彼此独立的，不会受到其他事务的执行影响。也就是说一个事务在提交之前，对其他事务都是不可见的。
+- **持久性（Durability）**：事务提交之后对数据的修改是持久性的，即使在系统出故障的情况下，比如系统崩溃或者存储介质发生故障，数据的修改依然是有效的。因为当事务完成，数据库的日志就会被更新，这时可以通过日志，让系统恢复到最后一次成功的更新状态。
+
+ACID 可谓事务的四大特性。其中，原子性是基础，隔离性是手段，一致性是约束条件，持久性则是目的。原子性与隔离性较易理解，在此讲讲对一致性的理解（可以参考 Wikipedia 对 Consistency 的阐述）。
+
+这里所指的一致性由具体业务定义，即任何写入数据库的数据都需满足事先定义的约束规则。
+
+例如，在数据表中将姓名 `name` 字段设为唯一性约束。此时，当事务提交或回滚时，若数据表中的姓名非唯一，便破坏了事务的一致性要求。所以，事务操作会使数据表的状态变为另一种一致状态。若事务中的某个操作失败，系统会自动撤销当前执行的事务，回到事务操作前的状态。
+
+事务的另一个特点是持久性，它通过事务日志来保证。日志包括回滚日志（binlog）和重做日志（redolog）。当通过事务对数据进行修改时，先将数据库的变化信息记录到重做日志中，再对数据库中对应的行进行修改。这样做的好处是，即便数据库系统崩溃，数据库重启后也能找到未更新到数据库系统中的重做日志，重新执行，从而使事务具有持久性。
+
+## 事务的控制
+
+当我们了解事务的特性后，再来看看如何使用事务。在 MySQL 中，需要选择合适的存储引擎才能支持事务。如果你使用 MySQL，可以通过 `SHOW ENGINES` 命令查看当前 MySQL 支持的存储引擎有哪些，以及这些存储引擎是否支持事务。
+
+```shell
+mysql> SHOW ENGINES;
++--------------------+---------+----------------------------------------------------------------+--------------+------+------------+
+| Engine             | Support | Comment                                                        | Transactions | XA   | Savepoints |
++--------------------+---------+----------------------------------------------------------------+--------------+------+------------+
+| ndbcluster         | NO      | Clustered, fault-tolerant tables                               | NULL         | NULL | NULL       |
+| MEMORY             | YES     | Hash based, stored in memory, useful for temporary tables      | NO           | NO   | NO         |
+| InnoDB             | DEFAULT | Supports transactions, row-level locking, and foreign keys     | YES          | YES  | YES        |
+| PERFORMANCE_SCHEMA | YES     | Performance Schema                                             | NO           | NO   | NO         |
+| MyISAM             | YES     | MyISAM storage engine                                          | NO           | NO   | NO         |
+| FEDERATED          | NO      | Federated MySQL storage engine                                 | NULL         | NULL | NULL       |
+| ndbinfo            | NO      | MySQL Cluster system information storage engine                | NULL         | NULL | NULL       |
+| MRG_MYISAM         | YES     | Collection of identical MyISAM tables                          | NO           | NO   | NO         |
+| BLACKHOLE          | YES     | /dev/null storage engine (anything you write to it disappears) | NO           | NO   | NO         |
+| CSV                | YES     | CSV storage engine                                             | NO           | NO   | NO         |
+| ARCHIVE            | YES     | Archive storage engine                                         | NO           | NO   | NO         |
++--------------------+---------+----------------------------------------------------------------+--------------+------+------------+
+11 rows in set (0.01 sec)
+```
+
+能看出在 MySQL 中，InnoDB 是支持事务的，而 MyISAM 存储引擎不支持事务。
+
+常用的事务控制语句为：
+
+1. `START TRANSACTION` 或者 `BEGIN`：显式开启一个事务
+2. `COMMIT`：提交事务。当提交事务后，对数据库的修改是永久性的
+3. `ROLLBACK` 或者 `ROLLBACK TO [SAVEPOINT]`，回滚事务。撤销正在进行的所有没有提交的修改，或者将事务回滚到某个保存点
+4. `SAVEPOINT`：在事务中创建保存点，方便后续针对保存点进行回滚。一个事务中可以存在多个保存点
+5. `RELEASE SAVEPOINT`：删除某个保存点
+6. `SET TRANSACTION`：设置事务的隔离级别
+
+需要说明的是，使用事务有两种方式，即隐式事务和显式事务。隐式事务实际上是自动提交。Oracle 默认不自动提交，需手写 `COMMIT` 命令。而 MySQL 默认自动提交，不过我们可以配置 MySQL 的参数。
+
+```shell
+mysql> set autocommit =0; // 关闭自动提交
+
+
+mysql> set autocommit =1; // 开启自动提交
+```
+
+在 MySQL 的默认状态下，下面这个事务最后的处理结果是什么：
+
+```sql
+CREATE TABLE students(name varchar(255), PRIMARY KEY (name)) ENGINE = InnoDB;
+
+
+BEGIN;
+
+
+INSERT INTO students
+SELECT 'tom';
+
+
+COMMIT;
+
+
+BEGIN;
+
+
+INSERT INTO students
+SELECT 'jerry';
+
+
+INSERT INTO students
+SELECT 'jerry';
+
+
+ROLLBACK;
+
+
+SELECT *
+FROM students;
+```
+
+```sql
++------+
+| name |
++------+
+| tom  |
++------+
+1 row in set (0.00 sec)
+```
+
+在这个事务中，整个 SQL 执行了两个事务。第一个事务是插入 `tom`，提交后执行成功。第二个事务是插入两次 `jerry`。需注意，我们将 `name` 设置为主键，而主键的值是唯一的。所以，第二次插入 `jerry` 时会产生错误。接着执行 `ROLLBACK`，相当于对事务进行了回滚。因此，我们看到最终结果只有一行数据，即第一个事务执行之后的结果—— `tom`。
+
+那么如果我们进行下面的操作又会怎样呢？
+
+```sql
+CREATE TABLE students(name varchar(255), PRIMARY KEY (name)) ENGINE = InnoDB;
+
+
+BEGIN;
+
+
+INSERT INTO students
+SELECT 'tom';
+
+
+COMMIT;
+
+
+INSERT INTO students
+SELECT 'jerry';
+
+
+INSERT INTO students
+SELECT 'jerry';
+
+
+ROLLBACK;
+
+
+SELECT *
+FROM students;
+```
+
+```sql
++-------+
+| name  |
++-------+
+| jerry |
+| tom   |
++-------+
+2 rows in set (0.01 sec)
+```
+
+你能看到这次数据有 2 行。上一次操作中，我把两次插入 `jerry` 放到了一个事务里。而这次操作，它们不在同一个事务里。对于 MySQL 来说，在默认情况下，这实际上就是两个事务。因为在 `autocommit=1` 的情况下，MySQL 会进行隐式事务，也就是自动提交。所以，在进行第一次插入 `jerry` 后，数据表里就有了两行数据。而第二次插入 `jerry` 时，就会报错：`ERROR 1062 (23000): Duplicate entry 'jerry' for key 'students.PRIMARY'`。最后，当我们执行 `ROLLBACK` 的时候，实际上事务已经自动提交了，就没法进行回滚了。同样地，我们再来看看这段代码，你又能发现什么不同呢？
+
+```sql
+CREATE TABLE students(name varchar(255), PRIMARY KEY (name)) ENGINE = InnoDB;
+
+
+SET @@completion_type = 1;
+
+
+BEGIN;
+
+
+INSERT INTO students
+SELECT 'tom';
+
+
+COMMIT;
+
+
+INSERT INTO students
+SELECT 'jerry';
+
+
+INSERT INTO students
+SELECT 'jerry';
+
+
+ROLLBACK;
+
+
+SELECT *
+FROM students;
+```
+
+```sql
++------+
+| name |
++------+
+| tom  |
++------+
+1 row in set (0.00 sec)
+```
+
+上面的 SQL 代码在事务开始之前设置了 `SET @@completion_type = 1`。结果就和我们第一次处理的一样，只有一个 `tom`。这是为什么呢？
+
+这里我讲解一下 MySQL 中 `completion_type` 参数的作用：
+
+- `completion = 0`，这是默认情况。也就是说，当我们执行 `COMMIT` 的时候会提交事务。在执行下一个事务时，还需要我们使用 `START TRANSACTION` 或者 `BEGIN` 来开启。
+- `completion = 1`，在这种情况下，当我们提交事务后，相当于执行了 `COMMIT AND CHAIN`，也就是开启一个链式事务。即当我们提交事务之后，会开启一个相同隔离级别的事务。
+- `completion = 2`，这种情况下 `COMMIT = COMMIT AND RELEASE`，也就是当我们提交后，会自动与服务器断开连接。
+
+在上面这段代码里，我使用了 `completion = 1`。也就是说，当我提交之后，相当于在下一行写了一个 `START TRANSACTION` 或 `BEGIN`。这时，两次插入 `jerry` 会被认为是在同一个事务之内的操作。那么，第二次插入 `jerry` 就会导致事务失败，而回滚也将这次事务进行了撤销。所以，你能看到的结果就只有一个 `tom`。
+
+通过这样简单的练习，你应该能体会到事务提交和回滚的操作。
+
+当我们设置 `autocommit = 0` 时，不论是否采用 `START TRANSACTION` 或者 `BEGIN` 的方式来开启事务，都需要用 `COMMIT` 进行提交，让事务生效，使用 `ROLLBACK` 对事务进行回滚。
+
+当我们设置 `autocommit = 1` 时，每条 SQL 语句都会自动进行提交（自动开启事务、自动提交事务）。不过这时，如果你采用 `START TRANSACTION` 或者 `BEGIN` 的方式来**显式**地开启事务，那么这个事务只有在 `COMMIT` 时才会生效，在 `ROLLBACK` 时才会回滚。
+
+### 小结
+
+本节我们理解了事务的概念，并进行了简单的事务操作。在进行数据库操作时，可能会失败。不过，正因为有事务存在，即使数据库操作失败，也能保证数据的一致性。同样，当多个应用程序访问数据库时，事务能提供隔离，确保事务之间互不干扰。最后，事务一旦提交，结果就是永久性的。这意味着即使系统崩溃，数据库也能恢复数据。
+
+在使用事务时，我们会运用控制语句对其进行操作。然而，在实际操作中，并非每次使用 `COMMIT` 或 `ROLLBACK` 都能成功。所以，你需要了解当前系统的事务执行方式，例如一些常用的参数情况，像 MySQL 中的 `autocommit` 和 `completion_type` 等。
+
+事务是数据库区别于文件系统的重要特性之一。有了事务，能让数据库始终保持一致性。同时，我们还能通过事务机制恢复到某个时间点，确保已提交到数据库的修改不会因系统崩溃而丢失。
+
+## 事务隔离
+
+上一节中，我们谈到了事务的四大特性 — ACID，即原子性、一致性、隔离性和持久性。其中，隔离性是事务的基本特性之一，能防止数据库在并发处理时出现数据不一致的情况。在最严格的情况下，可采用串行化方式执行每个事务，这意味着事务之间相互独立，不存在并发。然而，在实际生产环境中，随着用户量增多，会出现大规模并发访问的情况。这就要求数据库有更高的吞吐能力，此时串行化方式无法满足数据库高并发访问的需求，我们需要降低数据库的隔离标准，以换取事务之间的并发能力。
+
+有时候，我们需牺牲一定的正确性以换取效率提升。也就是说，可通过设置不同隔离级别，在正确性与效率之间实现平衡。同时，随着 RDBMS 种类和应用场景增多，数据库设计者需统一对数据库隔离级别进行定义，说明这些隔离标准能解决哪些问题。
+
+本节主要讲解事务的异常以及隔离级别有哪些。在本节中我们要解决以下几个问题👇
+
+- 事务并发处理可能存在的三种异常是什么？
+- 脏读、不可重复读和幻读分别是什么？ 
+- 针对可能存在的异常情况，四种事务隔离级别分别是什么？ 
+- 如何使用 MySQL 客户端模拟脏读、不可重复读和幻读？
+
+### 事务并发处理可能存在的异常
+
+在了解数据库隔离级别之前，我们需先了解设定事务的隔离级别是为了解决哪些可能存在的问题，即事务并发处理时会有哪些异常情况。实际上，SQL-92 标准已对三种异常情况进行了定义，分别是脏读（Dirty Read）、不可重复读（Nonrepeatable Read）和幻读（Phantom Read）。
+
+假如我们有一张 `family_guy` 表：
+
+```sql
+mysql> CREATE TABLE family_guy (
+    ->     id INT PRIMARY KEY AUTO_INCREMENT,
+    ->     name VARCHAR(255) NOT NULL
+    -> );
+    
+mysql> INSERT INTO family_guy (name) VALUES ('Peter'), ('Lois'), ('Meg');
+
+mysql> select * from family_guy;
++----+-------+
+| id | name  |
++----+-------+
+|  1 | Peter |
+|  2 | Lois  |
+|  3 | Meg   |
++----+-------+
+```
+
+这张学生表会记录很多学生的姓名。如果我们不对事务进行隔离操作，那么在数据库进行事务并发处理时会出现什么情况呢？第一天，Stewie 访问数据库，正在进行事务操作，往里面写入一个新的学生—— Brian。
+
+```sql
+SQL> val
+SQL> INSERT INTO family_guy values(4, ' Brian');
+```
+
+当 Stewie 还没有提交该事务的时候，Brian 又对数据表进行了访问，他想看下这张表里都有哪些人：
+
+```sql
+SQL> SELECT * FROM family_guy;
+```
+
+此时，如果 `Brian` 看到的数据如下：
+
+```sql
++----+-------+
+| id | name  |
++----+-------+
+|  1 | Peter |
+|  2 | Lois  |
+|  3 | Meg   |
+|  4 | Brian |
++----+-------+
+```
+
+你有没有发现什么异常？这个时候 Stewie 还没有提交事务，但是小李却读到了 Stewie 还没有提交的数据，这种现象我们称之为 “脏读”。
+
+那么什么是不可重复读呢？
+
+第二天，小张想查看 `id=1` 是谁，于是他进行了 SQL 查询：
+
+```sql
+SQL> BEGIN;
+
+SQL> SELECT name FROM family_guy WHERE id = 1;
+```
+
+运行结果：
+
+```sql
++----+-------+
+| id | name  |
++----+-------+
+|  1 | Peter |
++----+-------+
+```
+
+然而此时，小李开始了一个事务操作，他对 `id=1` 的英雄姓名进行了修改，把原来的 “张飞” 改成了 “张翼德”：
+
+```sql
+SQL> BEGIN;
+
+SQL> UPDATE heros_temp SET name = ' 张翼德' WHERE id = 1;
+```
+
+然后小张再一次进行查询，同样也是查看 `id=1` 的英雄是谁：
+
+```sql
+SQL> SELECT name FROM heros_temp WHERE id = 1;
+```
+
+运行结果：
+
+```sql
+```
+
+这时你会发现，两次查询的结果不一样。小张会疑惑这是怎么回事呢？他明明刚进行了一次查询，接着又马上进行了一次查询，可结果两次的查询结果却不同。实际上，小张遇到的这种情况我们称之为 “不可重复读”，即同一条记录，两次读取的结果不同。
+
+从这个例子中，我们可以看到小张和小李分别开启了两个事务，针对客户端 A 和客户端 B。下面我用时间顺序的方式展示一下他们各自执行的内容。
+
+那什么是幻读呢？
+
+第三天，小张想要看下数据表里都有哪些英雄，他开始执行下面这条语句：
+
+```sql
+SQL> SELECT * FROM heros_temp;
+```
+
+这时当小张执行完之后，小李又开始了一个事务，往数据库里插入一个新的英雄 “吕布”：
+
+```sql
+SQL> BEGIN;
+SQL> INSERT INTO heros_temp values(4, ' 吕布');
+```
+
+不巧的是，小张这时忘记了英雄都有哪些，又重新执行了一遍查询：
+
+SQL> SELECT * FROM heros_temp;
+
+他发现这一次查询多了一个英雄，原来只有 3 个，现在变成了 4 个。这种异常情况我们称之为 “幻读”。
+
+我来总结一下这三种异常情况的特点：
+
+- 脏读：读到其他事务未提交的数据。
+- 不可重复读：对某数据进行读取，两次结果不同，即未读到相同内容。这是因为有其他事务对该数据同时进行了修改或删除。
+- 幻读：事务 A 按条件查询得到 N 条数据，此时事务 B 更改或增加了 M 条符合事务 A 查询条件的数据，于是事务 A 再次查询时发现有 N+M 条数据，产生幻读。
+
+### 事务的隔离级别
+
+脏读、不可重复读和幻读这三种异常情况在 SQL-92 标准中被定义。同时，SQL-92 标准还定义了四种隔离级别来解决这些异常情况。 
+
+隔离级别的高低由解决异常的数量从少到多的顺序决定（例如，读未提交可能存在三种异常，而可串行化则不会存在这些异常）。这四种隔离级别从低到高分别是：读未提交（READ UNCOMMITTED）、读已提交（READ COMMITTED）、可重复读（REPEATABLE READ）和可串行化（SERIALIZABLE）。 
+
+这些隔离级别能解决的异常情况如下表所示。
+
+![img](https://cdn.jsdelivr.net/gh/quartzeast/constellations-blog-images@main/img/2024%2F09%2F19%2F20240919-175806.webp)
+
+你能看到可串行化可以避免所有异常情况，而读未提交则会允许所有异常情况发生。
+
+- 读未提交，即允许读到未提交的数据。在这种情况下，查询不会使用锁，可能会产生脏读、不可重复读、幻读等情况。
+
+- 读已提交只能读到已经提交的内容，可以避免脏读的产生。它属于 RDBMS 中常见的默认隔离级别，比如 Oracle 和 SQL Server。但如果想要避免不可重复读或者幻读，就需要我们在 SQL 查询时编写带加锁的 SQL 语句。
+
+- 可重复读能保证一个事务在相同查询条件下两次查询得到的数据结果一致，可以避免不可重复读和脏读，但无法避免幻读。MySQL 默认的隔离级别就是可重复读。
+
+- 可串行化将事务进行串行化，在一个队列中按照顺序执行。可串行化是最高级别的隔离等级，可以解决事务读取中所有可能出现的异常情况，但它牺牲了系统的并发性。
+
+### 使用 MySQL 客户端来模拟三种异常
+
+首先我们需要一个学生数据表 `students`，执行以下 SQL 语句来完成 `students` 表的创建。
+
+```sql
+-- ----------------------------
+-- Table structure for students
+-- ----------------------------
+DROP TABLE IF EXISTS `students`;
+CREATE TABLE `students` (
+ `id` int(11) NOT NULL,
+ `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
+ PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
+-- ----------------------------
+-- Records of students
+-- ----------------------------
+INSERT INTO `students` VALUES (1, ' Peter');
+INSERT INTO `students` VALUES (2, ' Lois');
+INSERT INTO `students` VALUES (3, ' Meg');
+```
+
+模拟时，我们需开启两个 MySQL 客户端，即客户端 1 和客户端 2。在客户端 1 中，先查看当前会话的隔离级别，可使用命令：
+
+```sql
+mysql> show variables like 'transaction_isolation';
++-----------------------+-----------------+
+| Variable_name         | Value           |
++-----------------------+-----------------+
+| transaction_isolation | REPEATABLE-READ |
++-----------------------+-----------------+
+```
+
+可以看到当前的隔离级别是 `REPEATABLE-READ`，即可重复读。
+
+现在将隔离级别降到最低，设置为 `READ UNCOMMITTED`（读未提交）。
+
+```sql
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+```
+
+然后我们再查看下当前会话的隔离级别：
+
+```sql
+mysql> show variables like 'transaction_isolation';
++-----------------------+------------------+
+| Variable_name         | Value            |
++-----------------------+------------------+
+| transaction_isolation | READ-UNCOMMITTED |
++-----------------------+------------------+
+```
+
+因为 MySQL 默认是事务自动提交，这里我们还需要将 `autocommit` 参数设置为 `0`，命令如下：
+
+```sql
+mysql> SET autocommit = 0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> show variables like 'autocommit';
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| autocommit    | OFF   |
++---------------+-------+
+1 row in set (0.02 sec)
+```
+
+接着我们以同样的操作启动客户端 2，也就是将隔离级别设置为 `READ UNCOMMITTED`（读未提交），`autocommit` 设置为 `0`。
+
+#### 模拟脏读
+
+在客户端 2 中开启一个事务，在 `students` 表中写入一个新的学生 `Brian`，注意这个时候不要提交。
+
+```sql
+mysql> BEGIN;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> INSERT INTO students values(4, 'Brian');
+Query OK, 1 row affected (0.00 sec)
+```
+
+然后我们在客户端 1 中查看当前的 `students` 表：
+
+```sql
+mysql> select * from students;
++----+--------+
+| id | name   |
++----+--------+
+|  1 |  Peter |
+|  2 |  Lois  |
+|  3 |  Meg   |
+|  4 | Brian  |
++----+--------+
+4 rows in set (0.02 sec)
+```
+
+你能发现客户端 1 中读取了客户端 2 未提交的新学生  `Brian`，实际上客户端 2 可能马上回滚，从而造成了「脏读」。
+
+#### 模拟不可重复读
+
+使用客户端 1 查看 `id=1` 的学生：
+
+```sql
+mysql> SELECT name FROM students WHERE id = 1;
++--------+
+| name   |
++--------+
+|  Peter |
++--------+
+1 row in set (0.02 sec)
+```
+
+然后使用客户端 2 对 `id=1` 的学生的名称进行修改：
+
+```sql
+mysql> BEGIN;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> UPDATE students SET name = 'Quagmire' WHERE id = 1;
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+```
+
+此时再用客户端 1 进行查询：
+
+```sql
+mysql> SELECT name FROM students WHERE id = 1;
++----------+
+| name     |
++----------+
+| Quagmire |
++----------+
+1 row in set (0.00 sec)
+```
+
+此时对于客户端 1 来说，发生了「不可重复读」。
+
+#### 模拟幻读
+
+先用客户端 1 查询所有的学生：
+
+```sql
+mysql> SELECT * FROM students;
++----+--------+
+| id | name   |
++----+--------+
+|  1 |  Peter |
+|  2 |  Lois  |
+|  3 |  Meg   |
++----+--------+
+3 rows in set (0.01 sec)
+```
+
+然后用客户端 2 插入新的学生：
+
+```sql
+mysql> BEGIN;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> INSERT INTO students values(4, 'Brian');
+Query OK, 1 row affected (0.00 sec)
+```
+
+此时再用客户端 1 进行查看：
+
+```sql
+mysql> SELECT * FROM students;
++----+--------+
+| id | name   |
++----+--------+
+|  1 |  Peter |
+|  2 |  Lois  |
+|  3 |  Meg   |
+|  4 | Brian  |
++----+--------+
+4 rows in set (0.01 sec)
+```
+
+此时会发现表中多出了一条数据，即发生了「幻读」。
+
+#### 小结
+
