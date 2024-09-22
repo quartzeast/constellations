@@ -1,0 +1,29 @@
+---
+title: RabbitMQ 极速上手
+date: '2024-09-22'
+lastmod: '2024-09-22'
+tags: ['RabbitMQ']
+draft: false
+summary: RabbitMQ 是一个开源的消息代理，用于处理大规模的消息队列。本文将带你快速了解 RabbitMQ 的基本概念和使用方法。
+---
+
+## RabbitMQ 简介
+
+RabbitMQ 是一种可靠且成熟的消息传递和流式处理代理，旨在实现异步通信和消息传递。易于部署在云环境、本地。它基于**高级消息队列协议（AMQP）**，由 Erlang 语言开发，具有高并发、高可用性和灵活的路由能力。
+
+RabbitMQ 具有以下特点：
+
+- 可互操作：RabbitMQ [支持多种开放标准协议](https://www.rabbitmq.com/docs/protocols)，包括 AMQP 1.0 和 MQTT 5.0。有多个可用的客户端库，可以与多种编程语言一起使用
+- 灵活：RabbitMQ 提供了许多选项，你可以组合这些选项来定义消息如何从发布者发送到一个或多个使用者。[路由](https://www.rabbitmq.com/tutorials/tutorial-four-python)、[筛选](https://www.rabbitmq.com/tutorials/amqp-concepts#exchange-topic)、[流式处理](https://www.rabbitmq.com/docs/streams)、[联合](https://www.rabbitmq.com/docs/federation)身份验证等
+- 可靠：通过[确认消息传输](https://www.rabbitmq.com/docs/reliability)和[跨集群复制消息](https://www.rabbitmq.com/docs/quorum-queues)的能力，你可以使用 RabbitMQ 确保你的消息是安全的
+
+## RabbitMQ 的应用场景
+
+### 解耦服务
+
+
+
+有一个后端服务，需要向终端用户发送通知。存在两个通知渠道：移动应用程序的电子邮件和推送通知。
+
+后端将通知发布到两个队列，每个通道一个队列。管理电子邮件和推送通知的程序会订阅他们感兴趣的队列，并在通知到达后立即处理通知。
+

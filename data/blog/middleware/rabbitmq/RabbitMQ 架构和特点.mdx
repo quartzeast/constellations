@@ -1,0 +1,51 @@
+---
+title: RabbitMQ 核心概念与架构
+date: '2024-09-22'
+lastmod: '2024-09-22'
+tags: ['RabbitMQ']
+draft: false
+summary: 采用图解的方式，带你快速了解 RabbitMQ 的功能和特点
+---
+
+![No alt text provided for this image](https://cdn.jsdelivr.net/gh/quartzeast/constellations-blog-images@main/img/2024/09/22/2024:09:22-16:20:21:564)
+
+## 什么是 RabbitMQ
+
+RabbitMQ 是一款面向消息的中间件，充当消息代理或队列管理器。它提供一个平台，使应用可以队列形式进行连接并交换消息。借此，RabbitMQ 使应用程序能够异步地通信和处理数据。 
+
+## RabbitMQ 交换机
+
+生产者不会直接将消息发布到队列，而是将消息发送到交换机。交换机用于将消息路由到不同的队列（通过绑定和路由键）。绑定是将队列连接到交换机的东西。
+
+![No alt text provided for this image](https://cdn.jsdelivr.net/gh/quartzeast/constellations-blog-images@main/img/2024/09/22/2024:09:22-16:29:54:567)
+
+## RabbitMQ 架构及核心概念
+
+![Kafka.drawio](https://cdn.jsdelivr.net/gh/quartzeast/constellations-blog-images@main/img/2024/09/22/2024:09:22-17:04:38:582.svg)
+
+1. Producer：消息的发送端，也可以称为消息的生产者
+2. Consumer：消息的接收端，也可以称为消息的消费者
+3. Connection：消息发送端或消息接收端到消息队列主体服务器之间的 TCP 连接
+4. Channel：已经建立的 Connection 中建立的逻辑连接。建立 TCP 连接需要三次握手，反复确认。所以如果每一次访问 RabbitMQ 服务器都建立一个 Connection 开销会极大，效率低下。Channel 是一个已经建立的 Connection 中建立的逻辑连接，用于实现 Connection 的复用。每一次发送消息和接收消息，实际上都是使用 Connection 中的 Channel 来完成的。每个 Channel 都有自己的 id，Channel 之间是完全隔离的。
+5. Broker：RabbitMQ 的主体服务器本身，负责接收和分发消息。在搭建集群的时候，一个集群中会有多个 Broker。
+6. Virtual Host：虚拟主机（分组）。在 Broker 中，我们可以根据项目和功能的需要，划分很多个逻辑上的分组，一个分组就是一个 Virtual Host。每个虚拟主机相互独立，有各自的 exchange、queue，起到数据隔离的作用
+7. Exchange，交换机，是消息达到 Broker 的第一站
+8. Queue，队列，是消息的容器，消息放在这里等待被消费端取走
+
+发送消息时，消息先被发送到 Exchange 上，再通过 Exchange 发送到 Queue。注意，消息只在 Exchange 进行中转，Exchange 并不会存储消息，消息存储在 Queue 上。
+
+那么，交换机怎么知道消息要被发送到哪一个队列呢？通过绑定 (Binding)，具体是通过路由键的方式，把交换机和队列进行绑定。一个交换机可以绑定一个队列，也可以绑定多个队列。
+
+## 交换机类型
+
+- Default Exchange
+- Direct Exchange
+- Fanout Exchange
+- Topic Exchange
+- Headers Exchange
+
+![No alt text provided for this image](https://cdn.jsdelivr.net/gh/quartzeast/constellations-blog-images@main/img/2024/09/22/2024:09:22-16:31:06:049)
+
+## 参考
+
+- [AMQP 0-9-1 Model Explained](https://www.rabbitmq.com/tutorials/amqp-concepts)

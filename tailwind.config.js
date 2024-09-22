@@ -21,9 +21,12 @@ module.exports = {
         13: '3.25rem',
         14: '3.5rem',
       },
+      fontSize: {
+        base: '14px',
+      },
       fontFamily: {
-        sans: ['var(--font-space-grotesk)', ...fontFamily.sans],
-        mono: ['JetBrains Mono', 'Sarasa Nerd Semibold', ...fontFamily.mono],
+        sans: ['var(--font-inter)', ...fontFamily.sans],
+        mono: ['CommitMono', 'JetBrains Mono', 'Sarasa Nerd Semibold', ...fontFamily.mono],
       },
       colors: {
         primary: colors.pink,
